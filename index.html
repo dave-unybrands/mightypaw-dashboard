@@ -85,14 +85,14 @@ a{color:inherit;text-decoration:none}
 .sf-input{padding:6px 12px;font-size:12px;border:1px solid var(--gray-200);border-radius:var(--radius);background:var(--white);color:var(--gray-900);width:220px;outline:none;transition:border-color .15s;font-family:'DM Sans',sans-serif}
 .sf-input:focus{border-color:var(--blue)}
 .sf-ct{font-size:11px;color:var(--gray-400);margin-left:auto}
-table.t{width:100%;border-collapse:collapse;font-size:12px;min-width:480px}
-.t th{text-align:left;padding:8px 10px;font-weight:600;color:var(--gray-400);border-bottom:1px solid var(--gray-200);font-size:10px;white-space:nowrap;background:var(--gray-50);text-transform:uppercase;letter-spacing:.04em}
-.t td{padding:8px 10px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+table.t{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.t th{text-align:left;padding:9px 12px;font-weight:600;color:var(--gray-400);border-bottom:1px solid var(--gray-200);font-size:10px;white-space:nowrap;background:var(--gray-50);text-transform:uppercase;letter-spacing:.04em}
+.t td{padding:9px 12px;border-bottom:1px solid var(--gray-100);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .t tr:last-child td{border-bottom:none}
 .t tr:hover td{background:var(--gray-50)}
 .r{text-align:right}
-.sku-c{font-family:'DM Mono',monospace;font-size:10px;color:var(--gray-900);font-weight:500}
-.sku-n{font-size:10px;color:var(--gray-400);margin-top:1px}
+.sku-c{font-family:'DM Mono',monospace;font-size:10px;color:var(--gray-900);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.sku-n{font-size:10px;color:var(--gray-400);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .ch-tab-bar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:18px}
 .ch-panel{display:none}.ch-panel.active{display:block}
 .ac-row{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
@@ -597,7 +597,19 @@ const skuCell=(s,n)=>`<div class="sku-c">${s}</div><div class="sku-n">${n||nm(s)
 const tblMap={};
 function filterTable(id,q,fields){const s=tblMap[id];if(!s)return;const l=q.toLowerCase();const rows=q?s.data.filter(r=>fields.some(f=>String(r[f]||'').toLowerCase().includes(l))):s.data;document.getElementById('tb-'+id).innerHTML=rows.map(s.fn).join('');document.getElementById('ct-'+id).textContent=rows.length+' / '+s.data.length+' SKUs';}
 function initTS(id,data,fields,fn){tblMap[id]={data,fields,fn};}
-function buildTbl(id,data,fields,fn,hdrs){return`<div class="sf-wrap"><input class="sf-input" placeholder="Search..." oninput="filterTable('${id}',this.value,${JSON.stringify(fields).replace(/"/g,"'")})" id="sf-${id}"><span class="sf-ct" id="ct-${id}">${data.length} SKUs</span></div><div style="overflow-x:auto"><table class="t" style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200)"><thead><tr>${hdrs.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody id="tb-${id}">${data.map(fn).join('')}</tbody></table></div>`;}
+function buildTbl(id,data,fields,fn,hdrs){
+  // Column widths: SKU col = 35%, DOS col = 15%, middle numeric cols split the rest equally
+  const n=hdrs.length;
+  const skuPct=35;
+  const dosPct=15;
+  const midPct=n>2?Math.floor((100-skuPct-dosPct)/(n-2)):0;
+  const cols=hdrs.map((h,i)=>{
+    if(i===0)return`<col style="width:${skuPct}%">`;
+    if(i===n-1)return`<col style="width:${dosPct}%">`;
+    return`<col style="width:${midPct}%">`;
+  }).join('');
+  return`<div class="sf-wrap"><input class="sf-input" placeholder="Search..." oninput="filterTable('${id}',this.value,${JSON.stringify(fields).replace(/"/g,"'")})" id="sf-${id}"><span class="sf-ct" id="ct-${id}">${data.length} SKUs</span></div><div style="overflow-x:auto;min-width:0"><table class="t" style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);min-width:560px"><colgroup>${cols}</colgroup><thead><tr>${hdrs.map((h,i)=>`<th style="text-align:${i===0?'left':'right'}">${h}</th>`).join('')}</tr></thead><tbody id="tb-${id}">${data.map(fn).join('')}</tbody></table></div>`;
+}
 function avgDOS(arr,gD,gR){const v=arr.map(r=>{const d=gR(r);return d>0?gD(r)/d:null}).filter(x=>x!==null&&x<9999);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
 function atRisk(arr,gD,gR){return arr.filter(r=>{const d=gR(r);return d>0&&gD(r)/d<30}).length;}
 
@@ -677,29 +689,11 @@ const MKT_POOL={};
 ['Cheese_TrainingCracker_8oz',0]
 ].forEach(r=>{MKT_POOL['amz_ca:'+r[0]]=r[1];});
 
-// TikTok FBT (avail + inbound)
-[['Collagen_8pk_Var',31],['CheeseStick_4pk',34728],['CheesePuff_12oz',1210],['CowKneeCaps_8pk',13072],
-['CowEars_12pk',1040],['CheeseMed_4pk',20956],['CheeseMed_12pk',5184],['ChickenFeet_30pk',1719],
-['BeefGullet_30pk_6in',21],['BullyStick_12in_Curls_5',548],['CheeseSmall_5pk',1225],
-['CheeseLarge_12pk',4104],['Cheese_FoodTopper_6oz',2],['CheeseSmall_12pk',191],
-['ChickenJerky_14oz',832],['BullyStick_12in_STD_5',12019],['CheeseMstr_4pk',5499],
-['CheeseLarge_8pk',5094],['CheeseMstr_12pk',3196],['760-00520',9851],['HalfPigEar_12pk',4260],
-['FullPigEar_12pk',276],['BeefGulletJerky_14oz',63],['CheeseStick_1Mstr',2985],
-['BullyStick_Variety_ 10oz',2540],['CalmingChews_120_2pk',98],['BullyStick_12in_THK_5',11968],
-['CheckCord_Or_30',92],['BullyStick_12in_JMB_5',4],['NailClippers_Or',0],
-['HandsFree2.0_Green',485],['730-00039',350],['TreatPouch2.0_Black',1609],
-['Support_HarnessL',0],['LickBowl_Green',550],['Hair_Roller_5pk',0],['DblLeash_Adj_Rope_Bl',579],
-['HandsFree2.0_Orange',249],['LED_Collar_O_L',0],['Groom_Rake_Gr',134],['SlowFeed_M_O',434],
-['PeanutButter_Nat_2pk',347],['LickPad_Green',558],['SmartBell2.0_1_1',2702],
-['SafetyBelt_Buckle_Bl',13773],['SlowFeed_M_G',128],['DoubleDogLeash_WithHandle',25],
-['TreatPouch2.0_Grey',246],['LickPad_Orange',176],['LickBowl_Orange',0],
-['SlowFeed_Insert_Gr',0],['SmartBell2.0_2_1',3019],['SafetyBelt_Cable80',932],
-['730-00038',499],['LongLeash_Black30',61],['ChewProof_Leash6_O',317],
-['DoubleDogLeash_W_H_Lte',370],['VehicleHarness_LBlack',542],['Leath_Leash_6ft_Clip',23],
-['ChewProof_Leash6_G',425]
-].forEach(r=>{MKT_POOL['tiktok:'+r[0]]=r[1];});
+// TikTok FBT — no inventory data in BigQuery (all draws from WH 240)
+// MKT_POOL tiktok: keys intentionally omitted — WH 240 covers full TikTok demand
 
-// Shopify, Chewy, Walmart, Target+ — WH 240 → fulfillment directly
+// Shopify, Chewy, Walmart, Target+, TikTok — WH 240 → fulfillment directly
+// (TikTok FBT inventory not tracked in BigQuery; WH 240 covers full TikTok demand)
 // TikTok Samples demand is combined into D.tiktok above
 // They are purely WH 240 → fulfillment (no separate DC inventory buffer in this model)
 
@@ -720,8 +714,8 @@ function calcAlloc(){
   //
   // Shopify/Chewy/Walmart/Target+ have no separate pool → wh240_needed = dos_demand
 
-  const WH_ONLY=['shopify','chewy','walmart','target']; // no marketplace pool
-  const POOL_CHANNELS=['amz_us','amz_ca','tiktok'];     // have own pool
+  const WH_ONLY=['shopify','chewy','walmart','tiktok','target']; // WH 240 covers full demand
+  const POOL_CHANNELS=['amz_us','amz_ca'];                        // have own inventory pool
 
   return getAllSkus().map(sku=>{
     const wh=WH[sku]||0;
@@ -835,7 +829,7 @@ function renderAllocTable(){
     shopify:{label:'Shopify',color:'#95bf47',pool:'WH 240'},
     chewy:{label:'Chewy',color:'#0066cc',pool:'WH 240'},
     walmart:{label:'Walmart',color:'#0071ce',pool:'WH 240'},
-    tiktok:{label:'TikTok',color:'#111',pool:'FBT'},
+    tiktok:{label:'TikTok',color:'#111',pool:'WH 240'},
     target:{label:'Target+',color:'#cc0000',pool:'WH 240'},
   };
 
@@ -905,11 +899,51 @@ function renderAlloc(){allocData=calcAlloc();renderAllocSummary();renderAllocTab
 function filterAlloc(v){allocFilter=v;renderAllocTable();}
 
 // ── CHANNEL ROW BUILDERS ──────────────────────────────────────────────
-function amzRow(r){const d=r.daily>0?r.total/r.daily:null;return`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.daily.toFixed(1)}</td><td class="r">${r.avail.toLocaleString()}</td><td class="r" style="color:var(--blue)">${r.inbound.toLocaleString()}</td><td class="r" style="font-weight:600">${r.total.toLocaleString()}</td><td class="r">${Math.round(r.fcst1).toLocaleString()}</td><td><span class="dp ${dc(d)}">${dl(d)}</span>${bar(d)}</td></tr>`;}
-function wmRow(r){return`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.daily.toFixed(1)}</td><td class="r">${r.avail.toLocaleString()}</td><td class="r" style="color:var(--blue)">${r.inbound.toLocaleString()}</td><td class="r">${(r.avail+r.inbound).toLocaleString()}</td><td><span class="dp ${dc(r.dos)}">${dl(r.dos)}</span>${bar(r.dos)}</td></tr>`;}
-function ttRow(r){return`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.daily7.toFixed(1)}</td><td class="r">${r.avail.toLocaleString()}</td><td class="r" style="color:var(--blue)">${r.inbound.toLocaleString()}</td><td><span class="dp ${dc(r.dos)}">${dl(r.dos)}</span>${bar(r.dos)}</td></tr>`;}
-function tgtRow(r){const vel=D.target[r.sku]||0;const dos=vel>0?Math.round(r.inv/vel):null;return`<tr><td>${skuCell(r.sku,r.title)}</td><td class="r">${r.inv}${r.inv<10?`<span class="dp dr" style="margin-left:4px;font-size:9px">Low</span>`:''}</td><td class="r">${vel>0?vel.toFixed(2):'—'}</td><td><span class="dp ${dc(dos)}">${dl(dos)}</span>${bar(dos)}</td></tr>`;}
-function flRow(ch,r){const d=r.daily_velocity;const dos=d>0?((WH[r.sku]||0)/d):null;return`<tr><td>${skuCell(r.sku,r.name||nm(r.sku))}</td><td class="r">${d.toFixed(2)}</td><td class="r">${r.forecast_n45d||Math.round(d*45)}</td><td class="r">${(WH[r.sku]||0).toLocaleString()}</td><td><span class="dp ${dc(dos)}">${dl(dos)}</span>${bar(dos)}</td></tr>`;}
+function amzRow(r){
+  const d=r.daily>0?r.total/r.daily:null;
+  return`<tr>
+    <td>${skuCell(r.sku,r.name)}</td>
+    <td style="text-align:right">${r.daily.toFixed(1)}</td>
+    <td style="text-align:right">${r.avail.toLocaleString()}</td>
+    <td style="text-align:right;color:var(--blue)">${r.inbound.toLocaleString()}</td>
+    <td style="text-align:right;font-weight:600">${r.total.toLocaleString()}</td>
+    <td style="text-align:right">${Math.round(r.fcst1).toLocaleString()}</td>
+    <td style="text-align:right"><span class="dp ${dc(d)}">${dl(d)}</span>${bar(d)}</td>
+  </tr>`;}
+function wmRow(r){
+  return`<tr>
+    <td>${skuCell(r.sku,r.name)}</td>
+    <td style="text-align:right">${r.daily.toFixed(1)}</td>
+    <td style="text-align:right">${r.avail.toLocaleString()}</td>
+    <td style="text-align:right;color:var(--blue)">${r.inbound.toLocaleString()}</td>
+    <td style="text-align:right">${(r.avail+r.inbound).toLocaleString()}</td>
+    <td style="text-align:right"><span class="dp ${dc(r.dos)}">${dl(r.dos)}</span>${bar(r.dos)}</td>
+  </tr>`;}
+function ttRow(r){
+  return`<tr>
+    <td>${skuCell(r.sku,r.name)}</td>
+    <td style="text-align:right">${r.daily7.toFixed(1)}</td>
+    <td style="text-align:right">${r.avail.toLocaleString()}</td>
+    <td style="text-align:right;color:var(--blue)">${r.inbound.toLocaleString()}</td>
+    <td style="text-align:right"><span class="dp ${dc(r.dos)}">${dl(r.dos)}</span>${bar(r.dos)}</td>
+  </tr>`;}
+function tgtRow(r){
+  const vel=D.target[r.sku]||0;const dos=vel>0?Math.round(r.inv/vel):null;
+  return`<tr>
+    <td>${skuCell(r.sku,r.title)}</td>
+    <td style="text-align:right">${r.inv}${r.inv<10?`<span class="dp dr" style="margin-left:4px;font-size:9px">Low</span>`:''}</td>
+    <td style="text-align:right">${vel>0?vel.toFixed(2):'—'}</td>
+    <td style="text-align:right"><span class="dp ${dc(dos)}">${dl(dos)}</span>${bar(dos)}</td>
+  </tr>`;}
+function flRow(ch,r){
+  const d=r.daily_velocity;const dos=d>0?((WH[r.sku]||0)/d):null;
+  return`<tr>
+    <td>${skuCell(r.sku,r.name||nm(r.sku))}</td>
+    <td style="text-align:right">${d.toFixed(2)}</td>
+    <td style="text-align:right">${r.forecast_n45d||Math.round(d*45)}</td>
+    <td style="text-align:right">${(WH[r.sku]||0).toLocaleString()}</td>
+    <td style="text-align:right"><span class="dp ${dc(dos)}">${dl(dos)}</span>${bar(dos)}</td>
+  </tr>`;}
 
 // Channel definitions
 const CHANNEL_DEFS=[
@@ -1040,43 +1074,43 @@ function renderAlertTab(){
     {id:'amz_us',label:'Amazon US (FBA)',color:'#1a5fa8',
      rows:()=>OOS_DATA.amz_us,
      rowFn:(r)=>`<tr>
-       <td>${skuCell(r.sku,r.name)}</td>
-       <td class="r">${r.fba_avail}</td>
-       <td class="r" style="color:var(--blue)">${r.fba_inbound}</td>
-       <td class="r" style="font-weight:600">${r.fba_avail+r.fba_inbound}</td>
-       <td class="r">${r.fcst_m1.toLocaleString()}</td>
-       <td>${statusPill(r.status,r.dos)}</td>
+       <td class="col-sku">${skuCell(r.sku,r.name)}</td>
+       <td class="col-num r">${r.fba_avail}</td>
+       <td class="col-num r" style="color:var(--blue)">${r.fba_inbound}</td>
+       <td class="col-num r" style="font-weight:600">${r.fba_avail+r.fba_inbound}</td>
+       <td class="col-num r">${r.fcst_m1.toLocaleString()}</td>
+       <td class="col-dos">${statusPill(r.status,r.dos)}</td>
      </tr>`,
      hdrs:['SKU / Product','FBA Available','Inbound','Total FBA','Month Fcst','Status']},
     {id:'amz_ca',label:'Amazon CA (FBA)',color:'#2176b5',
      rows:()=>OOS_DATA.amz_ca,
      rowFn:(r)=>`<tr>
-       <td>${skuCell(r.sku,r.name)}</td>
-       <td class="r">${r.fba_avail}</td>
-       <td class="r" style="color:var(--blue)">${r.fba_inbound}</td>
-       <td class="r" style="font-weight:600">${r.fba_avail+r.fba_inbound}</td>
-       <td class="r">${r.fcst_m1.toLocaleString()}</td>
-       <td>${statusPill(r.status,r.dos)}</td>
+       <td class="col-sku">${skuCell(r.sku,r.name)}</td>
+       <td class="col-num r">${r.fba_avail}</td>
+       <td class="col-num r" style="color:var(--blue)">${r.fba_inbound}</td>
+       <td class="col-num r" style="font-weight:600">${r.fba_avail+r.fba_inbound}</td>
+       <td class="col-num r">${r.fcst_m1.toLocaleString()}</td>
+       <td class="col-dos">${statusPill(r.status,r.dos)}</td>
      </tr>`,
      hdrs:['SKU / Product','FBA Available','Inbound','Total FBA','Month Fcst','Status']},
     {id:'shopify',label:'Shopify (DTC)',color:'#95bf47',
      rows:()=>OOS_DATA.shopify,
-     rowFn:(r)=>`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.wh}</td><td class="r">${r.daily.toFixed(2)}</td><td>${statusPill(r.status,r.dos)}</td></tr>`,
+     rowFn:(r)=>`<tr><td class="col-sku">${skuCell(r.sku,r.name)}</td><td class="col-num r">${r.wh}</td><td class="col-num r">${r.daily.toFixed(2)}</td><td class="col-dos">${statusPill(r.status,r.dos)}</td></tr>`,
      hdrs:['SKU / Product','WH 240 on hand','Daily velocity','Status']},
     {id:'chewy',label:'Chewy (Wholesale)',color:'#0066cc',
      rows:()=>OOS_DATA.chewy,
      rowFn:()=>'',hdrs:[]},
     {id:'walmart',label:'Walmart 3P',color:'#0071ce',
      rows:()=>OOS_DATA.walmart,
-     rowFn:(r)=>`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.avail}</td><td>${statusPill(r.status,r.dos)}</td></tr>`,
+     rowFn:(r)=>`<tr><td class="col-sku">${skuCell(r.sku,r.name)}</td><td class="col-num r">${r.avail}</td><td class="col-dos">${statusPill(r.status,r.dos)}</td></tr>`,
      hdrs:['SKU / Product','Available units','Status']},
     {id:'tiktok',label:'TikTok (FBT + Samples)',color:'#111',
      rows:()=>OOS_DATA.tiktok,
-     rowFn:(r)=>`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.avail}</td><td class="r">${r.daily7}</td><td>${statusPill(r.status,r.dos)}</td></tr>`,
+     rowFn:(r)=>`<tr><td class="col-sku">${skuCell(r.sku,r.name)}</td><td class="col-num r">${r.avail}</td><td class="col-num r">${r.daily7}</td><td class="col-dos">${statusPill(r.status,r.dos)}</td></tr>`,
      hdrs:['SKU / Product','FBT Available','Daily (L7D)','Status']},
     {id:'target',label:'Target+',color:'#cc0000',
      rows:()=>OOS_DATA.target,
-     rowFn:(r)=>`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.inv}</td><td>${statusPill(r.status,r.dos)}</td></tr>`,
+     rowFn:(r)=>`<tr><td class="col-sku">${skuCell(r.sku,r.name)}</td><td class="col-num r">${r.inv}</td><td class="col-dos">${statusPill(r.status,r.dos)}</td></tr>`,
      hdrs:['SKU / Product','DC Inventory','Status']},
   ];
 
@@ -1109,7 +1143,7 @@ function renderAlertTab(){
     if(rows.length===0){
       html+=`<div class="alert-no-issues">No OOS or at-risk SKUs detected.</div>`;
     } else {
-      html+=`<div style="overflow-x:auto"><table class="t" style="background:var(--white)"><thead><tr>${ch.hdrs.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(ch.rowFn).join('')}</tbody></table></div>`;
+      html+=`<div style="overflow-x:auto"><table class="t" style="background:var(--white)"><colgroup><col style="width:220px">${ch.hdrs.slice(1,-1).map(()=>`<col style="width:100px">`).join('')}<col style="width:130px"></colgroup><thead><tr>${ch.hdrs.map((h,i)=>`<th${i>0?' class="r"':''}>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(ch.rowFn).join('')}</tbody></table></div>`;
     }
     html+=`</div>`;
   });
