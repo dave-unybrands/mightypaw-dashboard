@@ -112,6 +112,22 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;min-width:480px}
 .alloc-summary-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px}
 @media(max-width:900px){.alloc-summary-grid{grid-template-columns:repeat(3,1fr)}}
 .zero-cell{color:var(--gray-400);font-size:10px}
+
+/* ALERT / SURPLUS */
+.alert-ch-block{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
+.alert-ch-hdr{display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--gray-50);border-bottom:1px solid var(--gray-100)}
+.alert-ch-title{font-size:13px;font-weight:600;flex:1}
+.alert-badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600}
+.oos-badge{background:var(--red-light);color:var(--red)}
+.risk-badge{background:var(--amber-light);color:var(--amber)}
+.ok-badge{background:var(--green-light);color:var(--green)}
+.alert-no-issues{padding:16px 18px;font-size:12px;color:var(--gray-400);font-style:italic}
+.surplus-bar{height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden;margin-top:4px}
+.surplus-fill{height:100%;border-radius:4px;background:var(--green-mid)}
+.surplus-cell{min-width:120px}
+.ch-oos{font-size:11px;font-weight:700;color:var(--red)}
+.cst-oos{text-align:center;padding:8px 4px;background:var(--red-light);border-radius:var(--radius);border:1px solid rgba(162,45,45,.15)}
+
 /* IMPORT */
 .imp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
 .imp-panel{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow)}
@@ -141,6 +157,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;min-width:480px}
     <button class="nav-tab" onclick="switchTab('alloc',this)">WH 240 Allocation</button>
     <button class="nav-tab" onclick="switchTab('channels',this)">By Channel</button>
     <button class="nav-tab" onclick="switchTab('all',this)">All Channels</button>
+    <button class="nav-tab" onclick="switchTab('alert',this)" style="color:var(--red);font-weight:600">⚠ Alerts</button>
     <button class="nav-tab" onclick="switchTab('import',this)">Import Data</button>
   </div>
   <div class="topbar-right">
@@ -218,6 +235,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;min-width:480px}
         <th class="r">TikTok</th>
         <th class="r">Target+</th>
         <th>Coverage</th>
+        <th class="r">Surplus after alloc</th>
       </tr></thead>
       <tbody id="alloc-tbody"></tbody>
     </table>
@@ -234,6 +252,14 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;min-width:480px}
 <div id="tab-all" class="tab-content">
   <div class="sec">All channels — full scrollable view</div>
   <div id="all-cont"></div>
+</div>
+
+
+<!-- ALERT SUMMARY -->
+<div id="tab-alert" class="tab-content">
+  <div class="sec">Leadership alert summary — OOS &amp; at-risk SKUs by channel</div>
+  <div class="nb">SKUs flagged as Out of Stock (zero available inventory) or At Risk (DOS &lt;30d). Amazon US/CA data live from BigQuery. Other channels based on uploaded inventory files.</div>
+  <div id="alert-content"></div>
 </div>
 
 <!-- IMPORT -->
@@ -448,7 +474,7 @@ function renderAllocSummary(){
     <div class="mc"><div class="mc-lbl">Coverage</div><div class="mc-val" style="color:${pct>=100?'var(--green)':pct>=70?'var(--amber)':'var(--red)'}">${pct}%</div><div class="mc-sub">of demand met from WH 240</div></div>
     <div class="mc"><div class="mc-lbl">Shortfall</div><div class="mc-val" style="color:${shortfall>0?'var(--red)':'var(--green)'}">${shortfall>0?shortfall.toLocaleString():'None'}</div><div class="mc-sub">units below targets</div></div>
     <div class="mc"><div class="mc-lbl">SKUs with gaps</div><div class="mc-val" style="color:${gaps>0?'var(--amber)':'var(--green)'}">${gaps}</div><div class="mc-sub">fair-shared below target</div></div>
-    <div class="mc"><div class="mc-lbl">Surplus</div><div class="mc-val">${Math.max(0,totalWH-totalD).toLocaleString()}</div><div class="mc-sub">above all channel targets</div></div>`;
+    <div class="mc"><div class="mc-lbl">Total surplus</div><div class="mc-val" style="color:var(--green)">${Math.max(0,totalWH-totalD).toLocaleString()}</div><div class="mc-sub">units available after all allocations</div></div>`;
   CHANNELS.forEach(c=>{
     let t=0;Object.keys(D[c.id]).forEach(s=>t+=Math.round((D[c.id][s]||0)*DOS_TARGETS[c.id]));
     const el=document.getElementById('dr-'+c.id);if(el)el.textContent=t.toLocaleString()+' units needed';
@@ -460,13 +486,20 @@ function renderAllocTable(){
   const bc=p=>p>=100?'var(--green)':p>=70?'var(--amber)':'var(--red)';
   const pill=p=>{const cl=p>=100?'dg':p>=70?'dy':'dr';return`<span class="dp ${cl}">${p}%</span>`;};
   const cell=v=>v>0?v.toLocaleString():`<span class="zero-cell">—</span>`;
-  document.getElementById('alloc-tbody').innerHTML=rows.map(r=>`<tr>
+  const totalAllocated=a=>Object.values(a.alloc).reduce((s,v)=>s+v,0);
+  document.getElementById('alloc-tbody').innerHTML=rows.map(r=>{
+    const allocated=totalAllocated(r);
+    const surplus=Math.max(0,r.wh-allocated);
+    const surplusPct=r.wh>0?Math.round(surplus/r.wh*100):0;
+    const surplusColor=surplus>0?'var(--green)':'var(--gray-400)';
+    return`<tr>
     <td>${skuCell(r.sku,null)}</td>
     <td class="r" style="font-weight:600">${r.wh.toLocaleString()}</td>
     <td class="r" style="font-weight:600">${r.total.toLocaleString()}</td>
     ${CHANNELS.map(c=>`<td class="r">${cell(r.alloc[c.id])}</td>`).join('')}
     <td>${pill(r.pct)}<div class="pb"><div class="pf" style="width:${Math.min(100,r.pct)}%;background:${bc(r.pct)}"></div></div></td>
-  </tr>`).join('');
+    <td class="r surplus-cell"><span style="font-weight:600;color:${surplusColor}">${surplus>0?'+'+surplus.toLocaleString():'—'}</span>${surplus>0?`<div class="surplus-bar"><div class="surplus-fill" style="width:${surplusPct}%"></div></div>`:''}</td>
+  </tr>`;}).join('');
 }
 function renderAlloc(){allocData=calcAlloc();renderAllocSummary();renderAllocTable();}
 function filterAlloc(v){allocFilter=v;renderAllocTable();}
@@ -481,34 +514,103 @@ function flRow(ch,r){const d=r.daily_velocity;const dos=d>0?((WH[r.sku]||0)/d):n
 // Channel definitions
 const CHANNEL_DEFS=[
   {id:'amz_us',label:'Amazon US (FBA)',color:'#1a5fa8',live:true,
-   skus:()=>160,avgDOS:()=>avgDOS(AMZ_US,r=>r.total,r=>r.daily),atRisk:()=>atRisk(AMZ_US,r=>r.total,r=>r.daily),
+   skus:()=>160,oosCount:()=>OOS_DATA.amz_us.filter(r=>r.status==='OOS').length,avgDOS:()=>avgDOS(AMZ_US,r=>r.total,r=>r.daily),atRisk:()=>atRisk(AMZ_US,r=>r.total,r=>r.daily),
    badge:()=>{const d=avgDOS(AMZ_US,r=>r.total,r=>r.daily);return d<30?'br':d<45?'by':'bg'},badgeLbl:()=>{const d=avgDOS(AMZ_US,r=>r.total,r=>r.daily);return d<30?'At risk':d<45?'Watch':'Healthy'},
    html:()=>buildTbl('amz-us',AMZ_US,['sku','name'],amzRow,['SKU / Product','Daily (Flieber)','FBA available','Inbound to AMZ','Total FBA','Flieber N45D','DOS'])},
   {id:'amz_ca',label:'Amazon CA (FBA)',color:'#2176b5',live:true,
-   skus:()=>44,avgDOS:()=>avgDOS(AMZ_CA,r=>r.total,r=>r.daily),atRisk:()=>atRisk(AMZ_CA,r=>r.total,r=>r.daily),
+   skus:()=>44,oosCount:()=>OOS_DATA.amz_ca.filter(r=>r.status==='OOS').length,avgDOS:()=>avgDOS(AMZ_CA,r=>r.total,r=>r.daily),atRisk:()=>atRisk(AMZ_CA,r=>r.total,r=>r.daily),
    badge:()=>'bg',badgeLbl:()=>'Healthy',
    html:()=>buildTbl('amz-ca',AMZ_CA,['sku','name'],amzRow,['SKU / Product','Daily (Flieber)','FBA available','Inbound to AMZ','Total FBA','Flieber N45D','DOS'])},
   {id:'shopify',label:'Shopify (DTC)',color:'#95bf47',live:true,
-   skus:()=>167,avgDOS:()=>null,atRisk:()=>Object.keys(D.shopify).filter(s=>{const d=D.shopify[s];return d>0&&(WH[s]||0)/d<30;}).length,
+   skus:()=>167,oosCount:()=>OOS_DATA.shopify.filter(r=>r.status==='OOS').length,avgDOS:()=>null,atRisk:()=>Object.keys(D.shopify).filter(s=>{const d=D.shopify[s];return d>0&&(WH[s]||0)/d<30;}).length,
    badge:()=>'bg',badgeLbl:()=>'Via WH 240',
    html:()=>`<div class="nb">Fulfilled from WH 240. Velocities live from Flieber (Mighty Paw-Shopify-US). Use the WH 240 Allocation tab to see per-SKU coverage.</div>${buildTbl('shopify',Object.entries(D.shopify).filter(([s,d])=>d>0).sort((a,b)=>b[1]-a[1]).map(([s,d])=>({sku:s,daily_velocity:d,forecast_n45d:Math.round(d*45)})),['sku'],r=>flRow('shopify',r),['SKU / Product','Daily velocity (Flieber)','N45D forecast','WH 240 on hand','WH DOS'])}` },
   {id:'chewy',label:'Chewy (Wholesale)',color:'#0066cc',live:true,
-   skus:()=>44,avgDOS:()=>null,atRisk:()=>Object.keys(D.chewy).filter(s=>{const d=D.chewy[s];return d>0&&(WH[s]||0)/d<30;}).length,
+   skus:()=>44,oosCount:()=>0,avgDOS:()=>null,atRisk:()=>Object.keys(D.chewy).filter(s=>{const d=D.chewy[s];return d>0&&(WH[s]||0)/d<30;}).length,
    badge:()=>'bx',badgeLbl:()=>'No inv data',
    html:()=>`<div class="nb">Wholesale channel. Velocities live from Flieber (Mighty Paw-CHEWY-US). Fulfilled from WH 240.</div>${buildTbl('chewy',Object.entries(D.chewy).filter(([s,d])=>d>0).sort((a,b)=>b[1]-a[1]).map(([s,d])=>({sku:s,daily_velocity:d,forecast_n45d:Math.round(d*45)})),['sku'],r=>flRow('chewy',r),['SKU / Product','Daily velocity (Flieber)','N45D forecast','WH 240 on hand','WH DOS'])}` },
   {id:'tiktok',label:'TikTok FBT',color:'#111',live:true,
-   skus:()=>71,avgDOS:()=>avgDOS(TT.filter(r=>r.avail>0),r=>r.avail,r=>r.daily7),atRisk:()=>atRisk(TT.filter(r=>r.avail>0),r=>r.avail,r=>r.daily7),
+   skus:()=>71,oosCount:()=>OOS_DATA.tiktok.filter(r=>r.status==='OOS').length,avgDOS:()=>avgDOS(TT.filter(r=>r.avail>0),r=>r.avail,r=>r.daily7),atRisk:()=>atRisk(TT.filter(r=>r.avail>0),r=>r.avail,r=>r.daily7),
    badge:()=>'by',badgeLbl:()=>'Mixed stock',
    html:()=>buildTbl('tiktok',TT,['sku','name'],ttRow,['SKU / Product','Daily (L7D)','FBT available','Inbound','DOS'])},
   {id:'walmart',label:'Walmart 3P',color:'#0071ce',live:true,
-   skus:()=>119,avgDOS:()=>avgDOS(WM,r=>r.avail,r=>r.daily),atRisk:()=>atRisk(WM,r=>r.avail,r=>r.daily),
+   skus:()=>119,oosCount:()=>OOS_DATA.walmart.filter(r=>r.status==='OOS').length,avgDOS:()=>avgDOS(WM,r=>r.avail,r=>r.daily),atRisk:()=>atRisk(WM,r=>r.avail,r=>r.daily),
    badge:()=>{const d=avgDOS(WM,r=>r.avail,r=>r.daily);return d<30?'br':d<45?'by':'bg'},badgeLbl:()=>{const d=avgDOS(WM,r=>r.avail,r=>r.daily);return d<30?'At risk':d<45?'Watch':'Healthy'},
    html:()=>buildTbl('walmart',WM,['sku','name'],wmRow,['SKU / Product','Daily sold','Available','Inbound','Total','DOS'])},
   {id:'target',label:'Target+',color:'#cc0000',live:true,
-   skus:()=>47,avgDOS:()=>null,atRisk:()=>TGT.filter(r=>r.inv<10).length,
+   skus:()=>47,oosCount:()=>OOS_DATA.target.filter(r=>r.status==='OOS').length,avgDOS:()=>null,atRisk:()=>TGT.filter(r=>r.inv<10).length,
    badge:()=>{const r=TGT.filter(r=>r.inv<10).length;return r>3?'by':'bg'},badgeLbl:()=>{const r=TGT.filter(r=>r.inv<10).length;return r>0?r+' low stock':'Healthy'},
    html:()=>buildTbl('target',TGT,['sku','title'],tgtRow,['SKU / Product','DC Inventory','Daily velocity','DOS'])},
 ];
+
+
+// ── OOS & AT-RISK DATA — live from po_inventory_performance_3pls ─────
+const OOS_DATA = {
+  amz_us: [
+    {sku:'TreatBag_Grey',name:'Treat Bag Grey',fba_avail:0,fba_inbound:0,fcst_m1:72,dos:null,status:'OOS'},
+    {sku:'LickBowl_Orange',name:'Dog Lick Bowl Orange',fba_avail:0,fba_inbound:0,fcst_m1:28,dos:null,status:'OOS'},
+    {sku:'ElkAntlerGNT_LRG_8_2pk',name:'Elk Antler Giant 8in 2 Pack',fba_avail:0,fba_inbound:0,fcst_m1:25,dos:null,status:'OOS'},
+    {sku:'leatherLeash_Brown',name:'Leather Leash Brown Standard',fba_avail:0,fba_inbound:0,fcst_m1:14,dos:null,status:'OOS'},
+    {sku:'CheeseSmall_12pk',name:'Yak Cheese Small 12 Pack',fba_avail:41,fba_inbound:150,fcst_m1:1037,dos:0.8,status:'Critical <7d'},
+    {sku:'TreatPouch2.0_Black',name:'Treat Pouch 2.0 Black',fba_avail:9,fba_inbound:1600,fcst_m1:874,dos:2.1,status:'Critical <7d'},
+    {sku:'BeefGulletJerky_14oz',name:'Beef Gullet Jerky 14oz',fba_avail:33,fba_inbound:30,fcst_m1:485,dos:0.5,status:'Critical <7d'},
+    {sku:'BullyStick_12in_JMB_5',name:'Bully Sticks 12in Jumbo 5 Pack',fba_avail:3,fba_inbound:1,fcst_m1:248,dos:0,status:'Critical <7d'},
+    {sku:'Collagen_8pk_Var',name:'Collagen Sticks Variety 8 Pack',fba_avail:31,fba_inbound:0,fcst_m1:219,dos:0.5,status:'Critical <7d'},
+    {sku:'BeefGullet_30pk_6in',name:'Beef Gullet Chews 30pk 6in',fba_avail:21,fba_inbound:0,fcst_m1:192,dos:0.2,status:'Critical <7d'},
+    {sku:'PeanutButter_Nat_2pk',name:'Peanut Butter 2 Pack',fba_avail:23,fba_inbound:324,fcst_m1:182,dos:5.7,status:'Critical <7d'},
+    {sku:'CheesePuff_8oz',name:'Yak Cheese Puffs 8oz',fba_avail:15,fba_inbound:0,fcst_m1:176,dos:0.1,status:'Critical <7d'},
+    {sku:'Leath_Leash_6ft_Clip',name:'Leather Leash 6ft Clip',fba_avail:23,fba_inbound:0,fcst_m1:157,dos:0.6,status:'Critical <7d'},
+    {sku:'DoubleDogLeash_WithHandle',name:'Double Dog Leash With Handle',fba_avail:23,fba_inbound:2,fcst_m1:134,dos:0.6,status:'Critical <7d'},
+    {sku:'Grey_Run_Leash',name:'Hands Free Leash 3ft Grey',fba_avail:8,fba_inbound:0,fcst_m1:26,dos:0.4,status:'Critical <7d'},
+    {sku:'RetLeash2.0_Or_Lite',name:'Retractable Leash 2.0 Orange Lite',fba_avail:330,fba_inbound:72,fcst_m1:905,dos:18.8,status:'At Risk <30d'},
+    {sku:'BullyStick_12in_Curls_5',name:'Bully Stick Curls 10-12in 5 Pack',fba_avail:245,fba_inbound:303,fcst_m1:796,dos:23.3,status:'At Risk <30d'},
+    {sku:'TreatPouch2.0_Grey',name:'Treat Pouch 2.0 Grey',fba_avail:194,fba_inbound:52,fcst_m1:600,dos:13.6,status:'At Risk <30d'},
+    {sku:'ElkAntlerTHK_MED_6_2pk',name:'Elk Antler Medium 6in 2 Pack',fba_avail:119,fba_inbound:50,fcst_m1:218,dos:20.5,status:'At Risk <30d'},
+    {sku:'CalmingChews_120_2pk',name:'Calming Chews 2 Pack',fba_avail:92,fba_inbound:6,fcst_m1:116,dos:9.3,status:'At Risk <30d'},
+    {sku:'PoopBagHolder_Grey',name:'Poop Bag Holder Grey',fba_avail:65,fba_inbound:0,fcst_m1:85,dos:7.9,status:'At Risk <30d'},
+    {sku:'9N-LZU6-VXAP',name:'Hands Free Bungee Leash Black',fba_avail:81,fba_inbound:0,fcst_m1:46,dos:25.1,status:'At Risk <30d'},
+    {sku:'leather_brown_medium',name:'Leather Collar Brown Medium',fba_avail:56,fba_inbound:25,fcst_m1:58,dos:11.8,status:'At Risk <30d'},
+  ],
+  amz_ca: [
+    {sku:'RetLeash2.0_Or_Std',name:'Retractable Leash 2.0 Orange Std',fba_avail:0,fba_inbound:0,fcst_m1:26,dos:null,status:'OOS'},
+    {sku:'LickBowl_Orange',name:'Dog Lick Bowl Orange',fba_avail:0,fba_inbound:0,fcst_m1:21,dos:null,status:'OOS'},
+    {sku:'CheeseSmall_12pk',name:'Yak Cheese Small 12 Pack',fba_avail:7,fba_inbound:0,fcst_m1:383,dos:0,status:'Critical <7d'},
+    {sku:'ChewProof_Leash6_O',name:'Chew-Proof Leash 6ft Orange',fba_avail:22,fba_inbound:0,fcst_m1:16,dos:5.0,status:'Critical <7d'},
+    {sku:'SlowFeed_M_O',name:'Slow Feed Bowl Medium Orange',fba_avail:4,fba_inbound:10,fcst_m1:10,dos:0.9,status:'Critical <7d'},
+    {sku:'RetLeash3.0_Or_Std_wPD',name:'Retractable 3.0 Orange Std + Bags',fba_avail:106,fba_inbound:96,fcst_m1:125,dos:27.0,status:'At Risk <30d'},
+    {sku:'CarRestraint_Bl',name:'Car Headrest Seat Belt',fba_avail:125,fba_inbound:0,fcst_m1:81,dos:27.4,status:'At Risk <30d'},
+    {sku:'RetLeash3.0_Gr_Lite_wPD',name:'Retractable 3.0 Green Lite + Bags',fba_avail:64,fba_inbound:48,fcst_m1:59,dos:20.3,status:'At Risk <30d'},
+    {sku:'CheckCord_Or_30',name:'Check Cord 30ft Orange',fba_avail:21,fba_inbound:25,fcst_m1:18,dos:7.9,status:'At Risk <30d'},
+  ],
+  shopify: [
+    {sku:'Collagen_8pk_Var',name:'Collagen Sticks Variety 8 Pack',wh:WH['Collagen_8pk_Var']||0,daily:10.592,dos:0,status:'OOS'},
+    {sku:'BeefGulletJerky_14oz',name:'Beef Gullet Jerky 14oz',wh:WH['BeefGulletJerky_14oz']||0,daily:5.36,dos:0,status:'OOS'},
+  ],
+  chewy: [],
+  walmart: [
+    {sku:'760-00525',name:'Scooting Chews 120ct',avail:22,dos:21,status:'At Risk <30d'},
+    {sku:'CheesePuff_8oz',name:'Yak Cheese Puffs 8oz',avail:17,dos:20,status:'At Risk <30d'},
+    {sku:'DoubleDogLeash_WithHandle',name:'Double Dog Leash With Handle',avail:4,dos:11,status:'At Risk <30d'},
+    {sku:'TrafficHandle_Grey30',name:'Traffic Handle Leash 30in',avail:1,dos:5,status:'OOS'},
+  ],
+  tiktok: [
+    {sku:'CheeseSmall_12pk',name:'Yak Cheese Small 12 Pack',avail:180,daily7:11,dos:16,status:'At Risk <30d'},
+    {sku:'CheeseLarge_8pk',name:'Yak Cheese Large 8 Pack',avail:313,daily7:7,dos:44,status:'At Risk <30d'},
+    {sku:'BeefGulletJerky_14oz',name:'Beef Gullet Jerky 14oz',avail:0,daily7:5,dos:null,status:'OOS'},
+    {sku:'CheeseMed_12pk',name:'Yak Cheese Medium 12 Pack',avail:0,daily7:10,dos:null,status:'OOS'},
+    {sku:'BeefGullet_30pk_6in',name:'Beef Gullet Chews 30pk 6in',avail:0,daily7:0,dos:null,status:'OOS'},
+    {sku:'Collagen_8pk_Var',name:'Collagen Sticks Variety 8 Pack',avail:0,daily7:0,dos:null,status:'OOS'},
+  ],
+  target: [
+    {sku:'TieOut_Cable_30_Bl_M',name:'Tie-Out Cable 30ft Medium',inv:9,dos:9,status:'At Risk <30d'},
+    {sku:'CarRestraint_Bl',name:'Car Seatbelt Restraint',inv:12,dos:null,status:'At Risk <30d'},
+    {sku:'ChewProof_Leash6_G',name:'Chew-Proof Leash 6ft Green',inv:13,dos:null,status:'At Risk <30d'},
+    {sku:'Collagen_8pk_Var',name:'Collagen Sticks Variety 8 Pack',inv:0,dos:null,status:'OOS'},
+    {sku:'BeefGullet_30pk_6in',name:'Beef Gullet Sticks 30pk 6in',inv:6,dos:null,status:'At Risk <30d'},
+    {sku:'BullyBraided_5pk_Var',name:'Braided Bully Sticks 5pk Variety',inv:4,dos:null,status:'At Risk <30d'},
+    {sku:'CheeseLarge_8pk',name:'Yak Cheese Large 8 Pack',inv:17,dos:null,status:'At Risk <30d'},
+  ]
+};
 
 function initCh(id){
   const fn={amz_us:amzRow,'amz-us':amzRow,amz_ca:amzRow,'amz-ca':amzRow,walmart:wmRow,tiktok:ttRow,target:tgtRow};
@@ -531,10 +633,101 @@ function renderScorecard(){
     <div class="mc"><div class="mc-lbl">WH 240 alloc gaps</div><div class="mc-val" style="color:var(--amber)">${allocRisk}</div><div class="mc-sub">SKUs below DOS target</div></div>`;
 }
 
+
+// ── ALERT SUMMARY ─────────────────────────────────────────────────────
+function renderAlertTab(){
+  const chMap=[
+    {id:'amz_us',label:'Amazon US (FBA)',color:'#1a5fa8',
+     rows:()=>OOS_DATA.amz_us,
+     rowFn:(r)=>`<tr>
+       <td>${skuCell(r.sku,r.name)}</td>
+       <td class="r">${r.fba_avail}</td>
+       <td class="r" style="color:var(--blue)">${r.fba_inbound}</td>
+       <td class="r" style="font-weight:600">${r.fba_avail+r.fba_inbound}</td>
+       <td class="r">${r.fcst_m1.toLocaleString()}</td>
+       <td>${statusPill(r.status,r.dos)}</td>
+     </tr>`,
+     hdrs:['SKU / Product','FBA Available','Inbound','Total FBA','Month Fcst','Status']},
+    {id:'amz_ca',label:'Amazon CA (FBA)',color:'#2176b5',
+     rows:()=>OOS_DATA.amz_ca,
+     rowFn:(r)=>`<tr>
+       <td>${skuCell(r.sku,r.name)}</td>
+       <td class="r">${r.fba_avail}</td>
+       <td class="r" style="color:var(--blue)">${r.fba_inbound}</td>
+       <td class="r" style="font-weight:600">${r.fba_avail+r.fba_inbound}</td>
+       <td class="r">${r.fcst_m1.toLocaleString()}</td>
+       <td>${statusPill(r.status,r.dos)}</td>
+     </tr>`,
+     hdrs:['SKU / Product','FBA Available','Inbound','Total FBA','Month Fcst','Status']},
+    {id:'shopify',label:'Shopify (DTC)',color:'#95bf47',
+     rows:()=>OOS_DATA.shopify,
+     rowFn:(r)=>`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.wh}</td><td class="r">${r.daily.toFixed(2)}</td><td>${statusPill(r.status,r.dos)}</td></tr>`,
+     hdrs:['SKU / Product','WH 240 on hand','Daily velocity','Status']},
+    {id:'chewy',label:'Chewy (Wholesale)',color:'#0066cc',
+     rows:()=>OOS_DATA.chewy,
+     rowFn:()=>'',hdrs:[]},
+    {id:'walmart',label:'Walmart 3P',color:'#0071ce',
+     rows:()=>OOS_DATA.walmart,
+     rowFn:(r)=>`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.avail}</td><td>${statusPill(r.status,r.dos)}</td></tr>`,
+     hdrs:['SKU / Product','Available units','Status']},
+    {id:'tiktok',label:'TikTok FBT',color:'#111',
+     rows:()=>OOS_DATA.tiktok,
+     rowFn:(r)=>`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.avail}</td><td class="r">${r.daily7}</td><td>${statusPill(r.status,r.dos)}</td></tr>`,
+     hdrs:['SKU / Product','FBT Available','Daily (L7D)','Status']},
+    {id:'target',label:'Target+',color:'#cc0000',
+     rows:()=>OOS_DATA.target,
+     rowFn:(r)=>`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.inv}</td><td>${statusPill(r.status,r.dos)}</td></tr>`,
+     hdrs:['SKU / Product','DC Inventory','Status']},
+  ];
+
+  let html='';
+  // Overall summary
+  let totalOOS=0,totalRisk=0;
+  chMap.forEach(ch=>{
+    const rows=ch.rows();
+    const oos=rows.filter(r=>r.status==='OOS').length;
+    const risk=rows.filter(r=>r.status!=='OOS').length;
+    totalOOS+=oos;totalRisk+=risk;
+  });
+  html+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+    <div class="mc"><div class="mc-lbl">Total OOS SKUs</div><div class="mc-val" style="color:var(--red)">${totalOOS}</div><div class="mc-sub">zero inventory across all channels</div></div>
+    <div class="mc"><div class="mc-lbl">Total At Risk SKUs</div><div class="mc-val" style="color:var(--amber)">${totalRisk}</div><div class="mc-sub">DOS &lt;30 days</div></div>
+    <div class="mc"><div class="mc-lbl">Channels affected</div><div class="mc-val">${chMap.filter(ch=>ch.rows().length>0).length}</div><div class="mc-sub">out of 7 channels</div></div>
+  </div>`;
+
+  chMap.forEach(ch=>{
+    const rows=ch.rows();
+    const oos=rows.filter(r=>r.status==='OOS').length;
+    const risk=rows.filter(r=>r.status!=='OOS').length;
+    const badges=`${oos>0?`<span class="alert-badge oos-badge">${oos} OOS</span>`:''}${risk>0?`<span class="alert-badge risk-badge" style="margin-left:4px">${risk} At Risk</span>`:''}${oos===0&&risk===0?`<span class="alert-badge ok-badge">All Clear</span>`:''}`;
+    html+=`<div class="alert-ch-block">
+      <div class="alert-ch-hdr">
+        <span class="ch-dot" style="background:${ch.color}"></span>
+        <span class="alert-ch-title">${ch.label}</span>
+        ${badges}
+      </div>`;
+    if(rows.length===0){
+      html+=`<div class="alert-no-issues">No OOS or at-risk SKUs detected.</div>`;
+    } else {
+      html+=`<div style="overflow-x:auto"><table class="t" style="background:var(--white)"><thead><tr>${ch.hdrs.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(ch.rowFn).join('')}</tbody></table></div>`;
+    }
+    html+=`</div>`;
+  });
+  document.getElementById('alert-content').innerHTML=html;
+}
+
+function statusPill(status,dos){
+  const isOOS=status==='OOS';
+  const isCrit=status==='Critical <7d';
+  const cls=isOOS?'dr':isCrit?'dr':'dy';
+  const dosStr=dos!==null&&dos!==undefined?` · ${Math.round(dos)}d DOS`:'';
+  return`<span class="dp ${cls}">${status}${dosStr}</span>`;
+}
+
 // ── CHANNEL CARDS ─────────────────────────────────────────────────────
 function renderCards(){
   document.getElementById('ch-grid').innerHTML=CHANNEL_DEFS.map(ch=>{
-    const d=ch.avgDOS();const r=ch.atRisk();const s=ch.skus();
+    const d=ch.avgDOS();const r=ch.atRisk();const s=ch.skus();const o=ch.oosCount();
     return`<div class="ch-card" onclick="openDrill('${ch.id}')" id="card-${ch.id}">
       <div class="ch-hdr">
         <div class="ch-name"><span class="ch-dot" style="background:${ch.color}"></span>${ch.label}${ch.live?`<span class="live-pill" style="font-size:9px;padding:2px 6px"><span class="live-dot"></span>Live</span>`:''}</div>
@@ -542,7 +735,7 @@ function renderCards(){
       </div>
       <div class="ch-stats">
         <div class="cst"><div class="cst-v">${s}</div><div class="cst-l">Total SKUs</div></div>
-        <div class="cst"><div class="cst-v"><span class="dp ${dc(d)}">${dl(d)}</span></div><div class="cst-l">Avg DOS</div></div>
+        <div class="cst ${o>0?'cst-oos':''}"><div class="cst-v" style="${o>0?'color:var(--red)':''}">${o}</div><div class="cst-l">OOS</div></div>
         <div class="cst"><div class="cst-v" style="${r>0?'color:var(--red)':''}">${r}</div><div class="cst-l">At risk</div></div>
       </div>
     </div>`;
@@ -581,6 +774,7 @@ function switchTab(t,btn){
   if(t==='all')renderAll();
   if(t==='channels')renderByChannel();
   if(t==='alloc')renderAlloc();
+  if(t==='alert')renderAlertTab();
 }
 
 // ── IMPORT ────────────────────────────────────────────────────────────
