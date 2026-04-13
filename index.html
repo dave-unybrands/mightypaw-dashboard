@@ -212,7 +212,13 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;min-width:480px}
 <!-- ALLOCATION -->
 <div id="tab-alloc" class="tab-content">
   <div class="sec">Step 1 — set target days of supply per channel</div>
-  <div class="nb">WH 240 (Rawson Road 240) is the <strong>single inventory pool</strong> feeding all 7 channels. All velocities are live from Flieber (BigQuery). Set your desired DOS target per channel — the engine calculates each channel's unit need, then fair-shares WH 240 inventory proportionally if total demand exceeds supply.</div>
+  <div class="nb" style="border-left:3px solid var(--blue);padding-left:14px">
+  <strong>How to read this table:</strong> Set your target Days of Supply (DOS) per channel using the sliders above.
+  The engine calculates how many units each channel needs, then checks if WH 240 can cover all non-Amazon channels.
+  Amazon US and CA have their own <strong>FBA inventory pool</strong> (available + inbound) separate from WH 240.
+  The <strong style="color:var(--green)">WH 240 surplus</strong> column shows units remaining in WH 240 after all Shopify, Chewy, Walmart, TikTok, and Target+ allocations are fully met.
+  A green surplus means you have buffer stock. A "—" means inventory is tight and being fair-shared across channels.
+</div>
   <div class="alloc-ch-grid" id="alloc-dos-controls"></div>
   <div class="sec">Allocation summary</div>
   <div class="alloc-summary-grid" id="alloc-summary-cards"></div>
@@ -225,17 +231,17 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;min-width:480px}
     <table class="t" style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);min-width:960px">
       <thead><tr>
         <th>SKU / product</th>
-        <th class="r">WH 240</th>
-        <th class="r">WH 240 demand</th>
-        <th class="r">Amz US</th>
-        <th class="r">Amz CA</th>
-        <th class="r">Shopify</th>
-        <th class="r">Chewy</th>
-        <th class="r">Walmart</th>
-        <th class="r">TikTok</th>
-        <th class="r">Target+</th>
+        <th class="r">WH 240 on hand (units)</th>
+        <th class="r">WH 240 needed (units)</th>
+        <th class="r">Amz US (FBA units)</th>
+        <th class="r">Amz CA (FBA units)</th>
+        <th class="r">Shopify (units)</th>
+        <th class="r">Chewy (units)</th>
+        <th class="r">Walmart (units)</th>
+        <th class="r">TikTok (units)</th>
+        <th class="r">Target+ (units)</th>
         <th>Coverage</th>
-        <th class="r">Surplus after alloc</th>
+        <th class="r" style="color:var(--green);font-weight:700">✓ WH 240 surplus (units)</th>
       </tr></thead>
       <tbody id="alloc-tbody"></tbody>
     </table>
@@ -370,7 +376,129 @@ const TT=[{sku:'CheeseSmall_12pk',name:'Yak Cheese Small 12 Pack',avail:180,inbo
 const TGT=[{tcin:94189992,sku:'CheeseStick_4pk',title:'Yak Cheese Large 4 Pack',inv:227,price:26.99},{tcin:1000053759,sku:'CheeseMed_4pk',title:'Yak Cheese Medium 4 Pack',inv:94,price:23.99},{tcin:93227631,sku:'SafetyBelt_Buckle_Bl',title:'Car Seatbelt Buckle',inv:157,price:19.99},{tcin:93227318,sku:'LickPad_Green',title:'Dog Lick Pad Green',inv:143,price:18.99},{tcin:93227315,sku:'LickBowl_Green',title:'Slow Feeder Bowl Green',inv:134,price:19.99},{tcin:93227543,sku:'Martingale_LeatherBR_M',title:'Leather Martingale Medium',inv:115,price:20.99},{tcin:93228665,sku:'RetLeash2.0_Gr_Lite',title:'Retractable Leash Green Lite',inv:92,price:20.99},{tcin:94189989,sku:'CheeseStick_1Mstr',title:'Yak Cheese X-Large 1 Pack',inv:42,price:17.99},{tcin:93228689,sku:'BullyStick_12in_STD_5',title:'Bully Sticks 12in Standard 5 Pack',inv:45,price:31.99},{tcin:93228679,sku:'CowKneeCaps_8pk',title:'Cow Kneecap Chews 8 Pack',inv:45,price:27.99},{tcin:93228687,sku:'760-00543',title:'Salmon Oil Chews 120ct',inv:45,price:20.99},{tcin:93228694,sku:'HalfPigEar_12pk',title:'Half Pig Ears 12 Pack',inv:49,price:22.99},{tcin:93228666,sku:'RetLeash2.0_Or_Lite',title:'Retractable Leash Orange Lite',inv:71,price:20.99},{tcin:93227317,sku:'LickBowl_Orange',title:'Slow Feeder Bowl Orange',inv:60,price:19.99},{tcin:93229526,sku:'HandsFree2.0_Green',title:'Hands-Free Leash Green',inv:60,price:21.99},{tcin:93214665,sku:'TinkleBell_SilverAllMetal',title:'Metal Dog Doorbell',inv:58,price:19.99},{tcin:93227319,sku:'TreatPouch2.0_Black',title:'Dog Treat Pouch Black',inv:63,price:21.99},{tcin:93227321,sku:'TreatPouch2.0_Grey',title:'Dog Treat Pouch Grey',inv:72,price:21.99},{tcin:93228681,sku:'RetLeash3.0_Gr_Std_wPD',title:'Retractable 3.0 Green Std + Bags',inv:40,price:23.99},{tcin:93228682,sku:'RetLeash3.0_Or_Std_wPD',title:'Retractable 3.0 Orange Std + Bags',inv:32,price:23.99},{tcin:93227641,sku:'Black_SafetyBelt',title:'Car Seatbelt Black',inv:73,price:19.99},{tcin:93214667,sku:'SmartBell2.0_1_1',title:'Smart Bell 2.0 1-Transmitter',inv:48,price:34.99},{tcin:93214669,sku:'SmartBell2.0_2_1',title:'Smart Bell 2.0 2-Transmitters',inv:35,price:39.99},{tcin:93228648,sku:'CheckCord_Or_30',title:'Check Cord 30ft Orange',inv:84,price:19.99},{tcin:93228640,sku:'ChewProof_Leash6_G',title:'Chew-Proof Leash 6ft Green',inv:13,price:19.99},{tcin:93228662,sku:'RetLeash2.0_Gr_Std',title:'Retractable Leash Green Std',inv:39,price:22.99},{tcin:93228664,sku:'RetLeash2.0_Or_Std',title:'Retractable Leash Orange Std',inv:34,price:22.99},{tcin:93228677,sku:'TieOut_Cable_30_Bl_XL',title:'Tie-Out Cable 30ft XL',inv:16,price:22.99},{tcin:93228680,sku:'TieOut_Cable_30_Bl_M',title:'Tie-Out Cable 30ft Med',inv:9,price:18.99},{tcin:93228650,sku:'BeefGulletJerky_14oz',title:'Beef Gullet Jerky 14oz',inv:11,price:25.99},{tcin:93228692,sku:'FullPigEar_12pk',title:'Full Pig Ears 12 Pack',inv:28,price:30.99},{tcin:93228688,sku:'760-00518',title:'Allergy Chews 120ct',inv:18,price:22.99},{tcin:93228684,sku:'760-00520',title:'Calming Chews 120ct',inv:39,price:22.99},{tcin:93228686,sku:'730-00038',title:'No Chew Spray 8oz',inv:25,price:20.99},{tcin:93228695,sku:'760-00523',title:'Tear Stain Chews 120ct',inv:18,price:20.99},{tcin:93228696,sku:'760-00521',title:'Urinary Support Chews 120ct',inv:30,price:24.99},{tcin:1000053755,sku:'ChickenJerky_14oz',title:'Chicken Jerky 14oz',inv:44,price:23.99},{tcin:94189987,sku:'CheeseMstr_4pk',title:'Yak Cheese X-Large 4 Pack',inv:19,price:39.99},{tcin:94189988,sku:'CheeseMed_12pk',title:'Yak Cheese Medium 12 Pack',inv:28,price:49.99},{tcin:1000053757,sku:'CheeseLarge_12pk',title:'Yak Cheese Large 12 Pack',inv:37,price:69.99},{tcin:1000053758,sku:'CheeseSmall_12pk',title:'Yak Cheese Small 12 Pack',inv:34,price:29.99},{tcin:94189990,sku:'CheeseLarge_8pk',title:'Yak Cheese Large 8 Pack',inv:17,price:49.99},{tcin:94189991,sku:'CheeseMstr_12pk',title:'Yak Cheese X-Large 12 Pack',inv:14,price:89.99},{tcin:93227636,sku:'Support_HarnessL',title:'Dog Lift Harness Large',inv:31,price:22.99},{tcin:93227638,sku:'Support_HarnessM',title:'Dog Lift Harness Medium',inv:7,price:19.99},{tcin:93228683,sku:'RetLeash3.0_Or_Lite_wPD',title:'Retractable 3.0 Orange Lite + Bags',inv:15,price:21.99},{tcin:93228667,sku:'RetLeash3.0_Gr_Lite_wPD',title:'Retractable 3.0 Green Lite + Bags',inv:17,price:21.99},{tcin:93229527,sku:'ChickenFeet_30pk',title:'Chicken Feet 30 Pack',inv:26,price:31.99},{tcin:93227630,sku:'CarRestraint_Bl',title:'Car Seatbelt Restraint',inv:12,price:20.99},{tcin:93227541,sku:'Martingale_LeatherBR_L',title:'Leather Martingale Large',inv:32,price:20.99},{tcin:93227314,sku:'SlowFeed_M_G',title:'Slow Feeder Lick Bowl Green',inv:24,price:19.99}];
 
 // ── AMZ FBA SNAPSHOT ──────────────────────────────────────────────────
-const AMZ_US=[{sku:'CheeseStick_4pk',name:'Yak Cheese Chews Large 4 Pack',avail:27786,inbound:7270,total:40937,daily:649.9,fcst1:29250},{sku:'BullyStick_12in_STD_5',name:'Bully Sticks 12in Standard 5 Pack',avail:9389,inbound:2950,total:17210,daily:730.1,fcst1:32855},{sku:'CheeseMed_4pk',name:'Yak Cheese Chews Medium 4 Pack',avail:17291,inbound:3804,total:25112,daily:230.9,fcst1:10388},{sku:'760-00518',name:'Allergy Chews 120ct',avail:12848,inbound:0,total:42452,daily:307.6,fcst1:13840},{sku:'BullyStick_12in_THK_5',name:'Bully Sticks 12in Thick 5 Pack',avail:7599,inbound:4350,total:16999,daily:126.7,fcst1:5703},{sku:'CowKneeCaps_8pk',name:'Cow Kneecap Chews 8 Pack',avail:12232,inbound:963,total:15695,daily:123.9,fcst1:5576},{sku:'CheeseMed_12pk',name:'Yak Cheese Chews Medium 12 Pack',avail:2710,inbound:2522,total:7174,daily:101.7,fcst1:4575},{sku:'760-00520',name:'Calming Chews 120ct',avail:9219,inbound:687,total:35233,daily:193.8,fcst1:8721},{sku:'CheeseLarge_12pk',name:'Yak Cheese Chews Large 12 Pack',avail:3229,inbound:908,total:6328,daily:66.6,fcst1:2995},{sku:'CheeseSmall_5pk',name:'Yak Cheese Chews Small 5 Pack',avail:873,inbound:388,total:1520,daily:61.9,fcst1:2787},{sku:'BullyStick_6in_Curls_5',name:'Bully Stick Curls 5-7in 5 Pack',avail:1569,inbound:745,total:3491,daily:69.4,fcst1:3123},{sku:'CheeseLarge_8pk',name:'Yak Cheese Chews Large 8 Pack',avail:3337,inbound:1795,total:6097,daily:58.2,fcst1:2621},{sku:'760-00521',name:'Urinary Chews 120ct',avail:3777,inbound:612,total:25761,daily:50.1,fcst1:2255},{sku:'CarRestraint_Bl',name:'Car Headrest Seat Belt',avail:1407,inbound:8,total:1583,daily:46.5,fcst1:2091},{sku:'HalfPigEar_12pk',name:'Half Pig Ear 12 Pack',avail:3729,inbound:560,total:9503,daily:45.6,fcst1:2050},{sku:'SmartBell2.0_1_1',name:'Smart Bell 2.0 1-Activator',avail:2579,inbound:153,total:5682,daily:34.9,fcst1:1572},{sku:'TreatPouch2.0_Black',name:'Treat Pouch 2.0 Black',avail:10,inbound:1600,total:6796,daily:34.8,fcst1:1564},{sku:'RetLeash2.0_Or_Lite',name:'Retractable Leash 2.0 Orange Lite',avail:346,inbound:72,total:489,daily:35.4,fcst1:1592},{sku:'SafetyBelt_Buckle_Bl',name:'Safety Belt Buckle Black',avail:13195,inbound:584,total:38897,daily:73.5,fcst1:3309},{sku:'CheeseMstr_4pk',name:'Yak Cheese X-Large 4 Pack',avail:4300,inbound:1260,total:7302,daily:70.4,fcst1:3170},{sku:'ChickenFeet_30pk',name:'Chicken Feet 30 Pack',avail:1541,inbound:210,total:1946,daily:39.7,fcst1:1789},{sku:'SmartBell2.0_2_1',name:'Smart Bell 2.0 2-Activator',avail:2658,inbound:381,total:6281,daily:29.8,fcst1:1343},{sku:'RetLeash2.0_Gr_Lite',name:'Retractable Leash 2.0 Green Lite',avail:1754,inbound:501,total:2467,daily:26.0,fcst1:1170}];
+const AMZ_US=[
+{sku:'BullyStick_12in_STD_5',name:'Bully Sticks 12in Standard 5 Pack',avail:9069,inbound:2950,total:12019,daily:730.111,fcst1:32855},
+{sku:'CheeseStick_4pk',name:'Yak Cheese Chews Large 4 Pack',avail:27498,inbound:7230,total:34728,daily:649.998,fcst1:29250},
+{sku:'760-00518',name:'Allergy Chews 120ct',avail:12760,inbound:0,total:12760,daily:307.554,fcst1:13840},
+{sku:'CheeseMed_4pk',name:'Yak Cheese Chews Medium 4 Pack',avail:17275,inbound:3681,total:20956,daily:230.85,fcst1:10388},
+{sku:'BullyStick_6in_STD_10',name:'Bully Sticks 6in Standard 10 Pack',avail:7074,inbound:1543,total:8617,daily:195.602,fcst1:8802},
+{sku:'760-00520',name:'Calming Chews 120ct',avail:9154,inbound:697,total:9851,daily:193.8,fcst1:8721},
+{sku:'BullyStick_12in_THK_5',name:'Bully Sticks 12in Thick 5 Pack',avail:7618,inbound:4350,total:11968,daily:126.737,fcst1:5703},
+{sku:'CowKneeCaps_8pk',name:'Cow Kneecap Chews 8 Pack',avail:12143,inbound:929,total:13072,daily:123.913,fcst1:5576},
+{sku:'CheeseMed_12pk',name:'Yak Cheese Chews Medium 12 Pack',avail:2661,inbound:2523,total:5184,daily:101.665,fcst1:4575},
+{sku:'BullyStick_6in_STD_25',name:'Bully Sticks 6in Standard 25 Pack',avail:2726,inbound:424,total:3150,daily:101.061,fcst1:4548},
+{sku:'SafetyBelt_Buckle_Bl',name:'Safety Belt Buckle Black',avail:13189,inbound:584,total:13773,daily:73.532,fcst1:3309},
+{sku:'CheeseMstr_4pk',name:'Yak Cheese X-Large 4 Pack',avail:4239,inbound:1260,total:5499,daily:70.437,fcst1:3170},
+{sku:'BullyStick_6in_Curls_5',name:'Bully Stick Curls 5-7in 5 Pack',avail:1543,inbound:745,total:2288,daily:69.393,fcst1:3123},
+{sku:'CheeseLarge_12pk',name:'Yak Cheese Chews Large 12 Pack',avail:3196,inbound:908,total:4104,daily:66.553,fcst1:2995},
+{sku:'CheeseSmall_5pk',name:'Yak Cheese Chews Small 5 Pack',avail:833,inbound:392,total:1225,daily:61.927,fcst1:2787},
+{sku:'CheeseLarge_8pk',name:'Yak Cheese Chews Large 8 Pack',avail:3299,inbound:1795,total:5094,daily:58.235,fcst1:2621},
+{sku:'CheeseSmall_12pk',name:'Yak Cheese Chews Small 12 Pack',avail:41,inbound:150,total:191,daily:56.308,fcst1:2534},
+{sku:'BullyStick_Variety_ 10oz',name:'Bully Sticks Variety 10oz',avail:2540,inbound:0,total:2540,daily:50.317,fcst1:2264},
+{sku:'760-00521',name:'Urinary Chews 120ct',avail:3764,inbound:612,total:4376,daily:50.109,fcst1:2255},
+{sku:'CarRestraint_Bl',name:'Car Headrest Seat Belt Black',avail:1368,inbound:3,total:1371,daily:46.472,fcst1:2091},
+{sku:'HalfPigEar_12pk',name:'Half Pig Ear 12 Pack',avail:3700,inbound:560,total:4260,daily:45.557,fcst1:2050},
+{sku:'ChickenFeet_30pk',name:'Chicken Feet 30 Pack',avail:1509,inbound:210,total:1719,daily:39.746,fcst1:1789},
+{sku:'BullyStick_12in_STD_10',name:'Bully Sticks 12in Standard 10 Pack',avail:809,inbound:287,total:1096,daily:39.381,fcst1:1772},
+{sku:'RetLeash2.0_Or_Lite',name:'Retractable Leash 2.0 Orange Lite',avail:330,inbound:72,total:402,daily:35.384,fcst1:1592},
+{sku:'CheeseStick_1Mstr',name:'Yak Cheese X-Large 1 Pack',avail:2245,inbound:740,total:2985,daily:34.985,fcst1:1574},
+{sku:'SmartBell2.0_1_1',name:'Smart Bell 2.0 1-Activator',avail:2549,inbound:153,total:2702,daily:34.929,fcst1:1572},
+{sku:'TreatPouch2.0_Black',name:'Treat Pouch 2.0 Black',avail:9,inbound:1600,total:1609,daily:34.759,fcst1:1564},
+{sku:'SmartBell2.0_2_1',name:'Smart Bell 2.0 2-Activator',avail:2639,inbound:380,total:3019,daily:29.834,fcst1:1343},
+{sku:'BullyStick_6in_STD_5',name:'Bully Sticks 6in Standard 5 Pack',avail:782,inbound:307,total:1089,daily:28.819,fcst1:1297},
+{sku:'BullyStick_12in_Curls_5',name:'Bully Stick Curls 10-12in 5 Pack',avail:245,inbound:303,total:548,daily:28.019,fcst1:1261},
+{sku:'RetLeash2.0_Gr_Lite',name:'Retractable Leash 2.0 Green Lite',avail:1727,inbound:501,total:2228,daily:25.992,fcst1:1170},
+{sku:'CheeseMstr_12pk',name:'Yak Cheese X-Large 12 Pack',avail:2076,inbound:1120,total:3196,daily:24.898,fcst1:1120},
+{sku:'CheesePuff_12oz',name:'Yak Cheese Puffs 12oz',avail:415,inbound:795,total:1210,daily:24.56,fcst1:1105},
+{sku:'ElkSplitAntler_MED_1pk',name:'Elk Split Antler Medium 1 Pack',avail:961,inbound:0,total:961,daily:24.238,fcst1:1091},
+{sku:'DoubleDogLeash_No_H_Lte',name:'Double Dog Leash No Handle Lite',avail:1693,inbound:653,total:2346,daily:23.184,fcst1:1043},
+{sku:'CowEars_12pk',name:'Cow Ear Chews 12 Pack',avail:869,inbound:171,total:1040,daily:21.675,fcst1:975},
+{sku:'BeefGulletJerky_14oz',name:'Beef Gullet Jerky 14oz',avail:33,inbound:30,total:63,daily:21.61,fcst1:972},
+{sku:'DoubleDogLeash_No_Handle',name:'Double Dog Leash No Handle',avail:1193,inbound:444,total:1637,daily:21.461,fcst1:966},
+{sku:'760-00523',name:'Tear Stain Chews 120ct',avail:2166,inbound:0,total:2166,daily:21.166,fcst1:952},
+{sku:'RetLeash2.0_Or_Std',name:'Retractable Leash 2.0 Orange Std',avail:1555,inbound:600,total:2155,daily:16.632,fcst1:748},
+{sku:'TreatPouch2.0_Grey',name:'Treat Pouch 2.0 Grey',avail:194,inbound:52,total:246,daily:15.035,fcst1:677},
+{sku:'ChickenJerky_14oz',name:'Chicken Jerky 14oz',avail:792,inbound:40,total:832,daily:14.107,fcst1:635},
+{sku:'760-00543',name:'Salmon Oil Chews 120ct',avail:1037,inbound:60,total:1097,daily:13.937,fcst1:627},
+{sku:'RetLeash3.0_Or_Lite_wPD',name:'Retractable 3.0 Orange Lite + Bags',avail:773,inbound:310,total:1083,daily:13.074,fcst1:588},
+{sku:'Collagen_8pk_Var',name:'Collagen Sticks Variety 8 Pack',avail:31,inbound:0,total:31,daily:11.765,fcst1:529},
+{sku:'BullyStick_12in_JMB_5',name:'Bully Sticks 12in Jumbo 5 Pack',avail:3,inbound:1,total:4,daily:11.473,fcst1:516},
+{sku:'RetLeash3.0_Gr_Lite_wPD',name:'Retractable 3.0 Green Lite + Bags',avail:882,inbound:120,total:1002,daily:11.203,fcst1:504},
+{sku:'SafetyBelt_Cable80',name:'Safety Belt Cable 80in',avail:932,inbound:0,total:932,daily:10.536,fcst1:474},
+{sku:'BeefGullet_30pk_6in',name:'Beef Gullet Chews 30pk 6in',avail:21,inbound:0,total:21,daily:10.281,fcst1:463},
+{sku:'Martingale_LeatherBR_M',name:'Leather Martingale Medium Brown',avail:426,inbound:451,total:877,daily:9.836,fcst1:443},
+{sku:'760-00525',name:'Scooting Chews 120ct',avail:530,inbound:324,total:854,daily:9.58,fcst1:431},
+{sku:'Martingale_LeatherBR_L',name:'Leather Martingale Large Brown',avail:759,inbound:226,total:985,daily:9.544,fcst1:429},
+{sku:'CheesePuff_8oz',name:'Yak Cheese Puffs 8oz',avail:15,inbound:0,total:15,daily:9.414,fcst1:424},
+{sku:'RetLeash3.0_Or_Std_wPD',name:'Retractable 3.0 Orange Std + Bags',avail:727,inbound:0,total:727,daily:9.238,fcst1:416},
+{sku:'FullPigEar_12pk',name:'Full Pig Ear 12 Pack',avail:276,inbound:0,total:276,daily:9.255,fcst1:416},
+{sku:'TreatBag_Black',name:'Treat Bag Black',avail:1207,inbound:0,total:1207,daily:7.062,fcst1:318},
+{sku:'PeanutButter_Nat_2pk',name:'Peanut Butter Natural 2 Pack',avail:23,inbound:324,total:347,daily:6.968,fcst1:314},
+{sku:'ChewProof_Leash6_G',name:'Chew-Proof Leash 6ft Green',avail:425,inbound:0,total:425,daily:6.243,fcst1:281},
+{sku:'Martingale_LeatherBR_S',name:'Leather Martingale Small Brown',avail:455,inbound:77,total:532,daily:6.144,fcst1:276},
+{sku:'CalmingChews_120_2pk',name:'Calming Chews 2 Pack 240ct',avail:92,inbound:6,total:98,daily:5.634,fcst1:254},
+{sku:'RetLeash3.0_Gr_Std_wPD',name:'Retractable 3.0 Green Std + Bags',avail:482,inbound:24,total:506,daily:5.613,fcst1:253},
+{sku:'LickPad_Green',name:'Dog Lick Pad Green',avail:458,inbound:100,total:558,daily:5.217,fcst1:235},
+{sku:'730-00038',name:'No Chew Spray 8oz',avail:319,inbound:180,total:499,daily:4.954,fcst1:223},
+{sku:'VehicleHarness_LBlack',name:'Vehicle Safety Harness Large',avail:392,inbound:150,total:542,daily:4.77,fcst1:215},
+{sku:'Leath_Leash_6ft_Clip',name:'Leather Leash 6ft Clip',avail:23,inbound:0,total:23,daily:4.785,fcst1:215},
+{sku:'760-00519',name:'Joint Chews 120ct',avail:476,inbound:60,total:536,daily:4.685,fcst1:211},
+{sku:'DogTagClip_3pk',name:'Dog Tag Clip 3 Pack',avail:220,inbound:52,total:272,daily:4.659,fcst1:210},
+{sku:'Mart2.0_L_Green',name:'Martingale 2.0 Large Green',avail:303,inbound:1,total:304,daily:4.653,fcst1:209},
+{sku:'760-00522',name:'Digestive Chews 120ct',avail:397,inbound:0,total:397,daily:4.483,fcst1:202},
+{sku:'LickBowl_Green',name:'Dog Lick Bowl Green',avail:550,inbound:0,total:550,daily:4.434,fcst1:200},
+{sku:'DblLeash_Adj_Rope_Bl',name:'Double Dog Leash Adj Rope Black',avail:429,inbound:150,total:579,daily:4.152,fcst1:187},
+{sku:'DoubleDogLeash_WithHandle',name:'Double Dog Leash With Handle',avail:23,inbound:2,total:25,daily:4.148,fcst1:187},
+{sku:'HandsFree2.0_Green',name:'Hands Free Leash 2.0 Green',avail:485,inbound:0,total:485,daily:3.669,fcst1:165},
+{sku:'LickPad_Orange',name:'Dog Lick Pad Orange',avail:175,inbound:1,total:176,daily:3.612,fcst1:163},
+{sku:'Black_SafetyBelt',name:'Safety Belt Black',avail:442,inbound:0,total:442,daily:3.543,fcst1:159},
+{sku:'DoubleDogLeash_W_H_Lte',name:'Double Dog Leash With Handle Lite',avail:370,inbound:0,total:370,daily:3.538,fcst1:159},
+{sku:'ElkAntlerTHK_MED_6_2pk',name:'Elk Antler Thick Medium 6in 2 Pack',avail:119,inbound:50,total:169,daily:3.404,fcst1:153},
+{sku:'TinkleBell_SilverAllMetal',name:'Metal Dog Doorbell Silver',avail:317,inbound:1,total:318,daily:3.342,fcst1:150},
+{sku:'Mart2.0_L_Orange',name:'Martingale 2.0 Large Orange',avail:267,inbound:0,total:267,daily:3.305,fcst1:149},
+{sku:'ElkSplitAntler_LG_1pk',name:'Elk Split Antler Large 1 Pack',avail:339,inbound:0,total:339,daily:3.183,fcst1:143},
+{sku:'Martingale_SBlack',name:'Martingale Small Black',avail:217,inbound:100,total:317,daily:3.068,fcst1:138},
+{sku:'HandsFree2.0_Orange',name:'Hands Free Leash 2.0 Orange',avail:249,inbound:0,total:249,daily:2.981,fcst1:134},
+{sku:'Martingale_MBlack',name:'Martingale Medium Black',avail:186,inbound:1,total:187,daily:2.91,fcst1:131},
+{sku:'leather_brown_large',name:'Leather Collar Brown Large',avail:242,inbound:1,total:243,daily:2.866,fcst1:129},
+{sku:'AllergyChews_120_2pk',name:'Allergy Chews 2 Pack 240ct',avail:336,inbound:30,total:366,daily:2.82,fcst1:127},
+{sku:'TreatBag_Grey',name:'Treat Bag Grey',avail:0,inbound:0,total:0,daily:2.752,fcst1:124},
+{sku:'RetLeash2.0_Gr_Std',name:'Retractable Leash 2.0 Green Std',avail:2023,inbound:0,total:2023,daily:2.613,fcst1:118},
+{sku:'PoopBagHolder_Grey',name:'Poop Bag Holder Grey',avail:65,inbound:0,total:65,daily:2.419,fcst1:109},
+{sku:'Running_leash_long',name:'Hands Free Running Leash Long',avail:155,inbound:0,total:155,daily:2.362,fcst1:106},
+{sku:'TieOut_Cable_30_Bl_XL',name:'Tie-Out Cable 30ft XL',avail:219,inbound:200,total:419,daily:2.229,fcst1:100},
+{sku:'ChewProof_Leash6_O',name:'Chew-Proof Leash 6ft Orange',avail:317,inbound:0,total:317,daily:1.997,fcst1:90},
+{sku:'leather_brown_medium',name:'Leather Collar Brown Medium',avail:56,inbound:25,total:81,daily:1.806,fcst1:81},
+{sku:'ElkAntlerTHK_MED_6_1pk',name:'Elk Antler Thick Medium 6in 1 Pack',avail:434,inbound:0,total:434,daily:1.727,fcst1:78},
+{sku:'LickBowl_Orange',name:'Dog Lick Bowl Orange',avail:0,inbound:0,total:0,daily:1.478,fcst1:67},
+{sku:'CheckCord_Or_30',name:'Check Cord 30ft Orange',avail:92,inbound:0,total:92,daily:1.369,fcst1:62},
+{sku:'SafetyBelt_Cable40',name:'Safety Belt Cable 40in',avail:3,inbound:0,total:3,daily:1.363,fcst1:61},
+{sku:'Mar2.0_M_Green',name:'Martingale 2.0 Medium Green',avail:130,inbound:2,total:132,daily:1.337,fcst1:60},
+{sku:'Martingale_MGrey',name:'Martingale Medium Grey',avail:481,inbound:0,total:481,daily:1.324,fcst1:60},
+{sku:'VehicleHarness_SBlack',name:'Vehicle Safety Harness Small',avail:22,inbound:0,total:22,daily:1.269,fcst1:57},
+{sku:'BullyBraided_5pk_Var',name:'Braided Bully Sticks 5pk Variety',avail:97,inbound:0,total:97,daily:1.196,fcst1:54},
+{sku:'SlowFeed_M_O',name:'Slow Feeder Bowl Medium Orange',avail:434,inbound:0,total:434,daily:1.198,fcst1:54},
+{sku:'Mar2.0_M_Orange',name:'Martingale 2.0 Medium Orange',avail:84,inbound:0,total:84,daily:1.137,fcst1:51},
+{sku:'9N-LZU6-VXAP',name:'Hands Free Bungee Leash Black',avail:81,inbound:0,total:81,daily:1.1,fcst1:50},
+{sku:'Grey_Run_LongLeash',name:'Hands Free Long Leash Grey',avail:62,inbound:1,total:63,daily:1.062,fcst1:48},
+{sku:'Mart2.0_S_M_Green',name:'Martingale 2.0 Small/Med Green',avail:64,inbound:0,total:64,daily:0.98,fcst1:44},
+{sku:'ElkAntlerGNT_LRG_8_2pk',name:'Elk Antler Giant 8in 2 Pack',avail:0,inbound:0,total:0,daily:0.9,fcst1:41},
+{sku:'Harness2.0_ Bl_L',name:'Sport Harness 2.0 Black Large',avail:54,inbound:0,total:54,daily:0.917,fcst1:41},
+{sku:'LongLeash_Black30',name:'Long Dog Lead 30ft Black',avail:61,inbound:0,total:61,daily:0.785,fcst1:35},
+{sku:'SlowFeed_M_G',name:'Slow Feeder Bowl Medium Green',avail:128,inbound:0,total:128,daily:0.736,fcst1:33},
+{sku:'leatherLeash_Brown',name:'Leather Dog Leash Brown',avail:0,inbound:0,total:0,daily:0.699,fcst1:31},
+{sku:'Grey_Run_Leash',name:'Hands Free Bungee Leash Grey',avail:8,inbound:0,total:8,daily:0.67,fcst1:30},
+{sku:'Groom_Rake_Gr',name:'Grooming Rake Green',avail:134,inbound:0,total:134,daily:0.653,fcst1:29},
+{sku:'TrBowl_800_2pk_Gr',name:'Travel Bowl 800ml 2pk Green',avail:3,inbound:0,total:3,daily:0.647,fcst1:29},
+{sku:'730-00039',name:'Ear Wash 4oz',avail:350,inbound:0,total:350,daily:0.528,fcst1:24},
+{sku:'TB2 Grey',name:'Tinkle Bells 2.0 Grey',avail:31,inbound:0,total:31,daily:0.505,fcst1:23},
+{sku:'UrinaryChews_120_2pk',name:'Urinary Chews 2 Pack 240ct',avail:11,inbound:0,total:11,daily:0.331,fcst1:15},
+{sku:'HandleX2_black2.0',name:'Double Handle Leash Black 2.0',avail:0,inbound:0,total:0,daily:0.128,fcst1:6},
+{sku:'ElkAntlerJMBO_MSTR_8_2pk',name:'Elk Antler Jumbo Master 8in 2 Pack',avail:23,inbound:0,total:23,daily:0.1,fcst1:5},
+{sku:'Martingale_SGrey',name:'Martingale Small Grey',avail:0,inbound:0,total:0,daily:0.08,fcst1:4},
+{sku:'Harness2.0_Gr_L',name:'Sport Harness 2.0 Green Large',avail:21,inbound:0,total:21,daily:0.078,fcst1:4},
+{sku:'ElkAntlerJMBO_MSTR_8_1pk',name:'Elk Antler Jumbo Master 8in 1 Pack',avail:0,inbound:0,total:0,daily:0.062,fcst1:3}
+];
 
 const AMZ_CA=[{sku:'CheeseStick_4pk',name:'Yak Cheese Large 4 Pack',avail:1938,inbound:2605,total:4543,daily:51.2,fcst1:2303},{sku:'CheeseMed_12pk',name:'Yak Cheese Medium 12 Pack',avail:242,inbound:600,total:842,daily:20.1,fcst1:906},{sku:'CheeseSmall_12pk',name:'Yak Cheese Small 12 Pack',avail:7,inbound:0,total:7,daily:17.9,fcst1:804},{sku:'CheeseMstr_4pk',name:'Yak Cheese X-Large 4 Pack',avail:655,inbound:390,total:1045,daily:17.5,fcst1:789},{sku:'TreatPouch2.0_Black',name:'Treat Pouch 2.0 Black',avail:2087,inbound:1,total:2088,daily:14.2,fcst1:639},{sku:'SafetyBelt_Buckle_Bl',name:'Safety Belt Buckle Black',avail:528,inbound:750,total:1903,daily:12.0,fcst1:540},{sku:'CheeseSmall_5pk',name:'Yak Cheese Small 5 Pack',avail:228,inbound:200,total:428,daily:11.5,fcst1:519},{sku:'CheeseMed_4pk',name:'Yak Cheese Medium 4 Pack',avail:832,inbound:200,total:1032,daily:11.5,fcst1:515},{sku:'CheeseLarge_12pk',name:'Yak Cheese Large 12 Pack',avail:295,inbound:600,total:895,daily:11.0,fcst1:495},{sku:'TreatPouch2.0_Grey',name:'Treat Pouch 2.0 Grey',avail:359,inbound:600,total:959,daily:8.5,fcst1:382},{sku:'CheeseLarge_8pk',name:'Yak Cheese Large 8 Pack',avail:246,inbound:600,total:846,daily:8.3,fcst1:375},{sku:'CheeseMstr_12pk',name:'Yak Cheese X-Large 12 Pack',avail:281,inbound:250,total:531,daily:7.5,fcst1:338},{sku:'Support_HarnessM',name:'Dog Lift Harness Medium',avail:371,inbound:200,total:571,daily:6.9,fcst1:311},{sku:'Support_HarnessL',name:'Dog Lift Harness Large',avail:212,inbound:36,total:788,daily:5.8,fcst1:261},{sku:'RetLeash2.0_Or_Lite',name:'Retractable Leash Orange Lite',avail:229,inbound:72,total:637,daily:4.3,fcst1:193}];
 
@@ -501,7 +629,7 @@ function renderAllocSummary(){
     <div class="mc"><div class="mc-lbl">WH 240 coverage</div><div class="mc-val" style="color:${pct>=100?'var(--green)':pct>=70?'var(--amber)':'var(--red)'}">${pct}%</div><div class="mc-sub">of WH 240 demand met</div></div>
     <div class="mc"><div class="mc-lbl">WH 240 shortfall</div><div class="mc-val" style="color:${shortfall>0?'var(--red)':'var(--green)'}">${shortfall>0?shortfall.toLocaleString():'None'}</div><div class="mc-sub">units below targets</div></div>
     <div class="mc"><div class="mc-lbl">SKUs with gaps</div><div class="mc-val" style="color:${gaps>0?'var(--amber)':'var(--green)'}">${gaps}</div><div class="mc-sub">fair-shared below target</div></div>
-    <div class="mc"><div class="mc-lbl">Total surplus</div><div class="mc-val" style="color:var(--green)">${Math.max(0,totalWH-totalD).toLocaleString()}</div><div class="mc-sub">units available after all allocations</div></div>`;
+    <div class="mc" style="border:2px solid var(--green-mid)"><div class="mc-lbl" style="color:var(--green);font-weight:600">✓ WH 240 surplus</div><div class="mc-val" style="color:var(--green);font-size:26px">${Math.max(0,totalWH-totalD).toLocaleString()}</div><div class="mc-sub" style="color:var(--green)">units free after all channel allocations</div></div>`;
   CHANNELS.forEach(c=>{
     let t=0;Object.keys(D[c.id]).forEach(s=>t+=Math.round((D[c.id][s]||0)*DOS_TARGETS[c.id]));
     const el=document.getElementById('dr-'+c.id);if(el)el.textContent=t.toLocaleString()+' units needed';
@@ -535,7 +663,7 @@ function renderAllocTable(){
     <td class="r" style="font-weight:600">${r.whNeed>0?r.whNeed.toLocaleString():'—'}</td>
     ${CHANNELS.map(c=>`<td class="r">${cell(r.alloc[c.id])}</td>`).join('')}
     <td style="white-space:nowrap">${coveragePill()}</td>
-    <td class="r surplus-cell"><span style="font-weight:600;color:${surplusColor}">${surplus>0?'+'+surplus.toLocaleString():'—'}</span>${surplus>0?`<div class="surplus-bar"><div class="surplus-fill" style="width:${surplusPct}%"></div></div>`:''}</td>
+    <td class="r surplus-cell" style="background:${surplus>0?'rgba(99,153,34,.07)':'transparent'}"><span style="font-size:13px;font-weight:700;color:${surplusColor}">${surplus>0?'+'+surplus.toLocaleString():'—'}</span>${surplus>0?`<div style="font-size:9px;color:var(--gray-400);margin-top:1px">${surplusPct}% of stock free</div>`:''}</td>
   </tr>`;}).join('');
 }
 function renderAlloc(){allocData=calcAlloc();renderAllocSummary();renderAllocTable();}
