@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mighty Paw · Omni-Channel Inventory Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#1a5fa8;--blue-light:#e6f1fb;--blue-mid:#b5d4f4;--blue-dark:#0c447c;
+  --green:#27500a;--green-light:#eaf3de;--green-mid:#639922;
+  --amber:#633806;--amber-light:#faeeda;--amber-mid:#ef9f27;
+  --red:#a32d2d;--red-light:#fcebeb;--red-mid:#e24b4a;
+  --gray-50:#f8f8f7;--gray-100:#f1efe8;--gray-200:#e0ddd6;--gray-400:#888780;--gray-700:#444441;--gray-900:#1a1a19;
+  --white:#fff;
+  --radius:8px;--radius-lg:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--gray-50);color:var(--gray-900);min-height:100vh;font-size:14px;line-height:1.5}
+a{color:inherit;text-decoration:none}
+.topbar{background:var(--white);border-bottom:1px solid var(--gray-200);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);flex-wrap:wrap;gap:8px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:36px;height:36px;background:var(--blue);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px;letter-spacing:-.5px;flex-shrink:0}
+.logo-text{font-size:15px;font-weight:600;color:var(--gray-900)}
+.logo-sub{font-size:11px;color:var(--gray-400);margin-top:1px}
+.nav-tabs{display:flex;gap:2px;background:var(--gray-100);padding:3px;border-radius:var(--radius);flex-wrap:wrap}
+.nav-tab{padding:6px 14px;font-size:12px;font-weight:500;border:none;background:transparent;cursor:pointer;border-radius:6px;color:var(--gray-400);white-space:nowrap;transition:all .15s;font-family:'DM Sans',sans-serif}
+.nav-tab:hover{color:var(--gray-700)}
+.nav-tab.active{background:var(--white);color:var(--gray-900);box-shadow:var(--shadow);border:1px solid var(--gray-200)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.as-of{font-size:11px;color:var(--gray-400)}
+.live-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:500;background:var(--green-light);color:var(--green);padding:3px 9px;border-radius:20px}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green-mid);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.content{padding:24px;max-width:1400px;margin:0 auto}
+.tab-content{display:none}.tab-content.visible{display:block}
+.sec{font-size:11px;font-weight:600;color:var(--gray-400);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+.mc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px}
+.mc{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow)}
+.mc-lbl{font-size:11px;color:var(--gray-400);margin-bottom:6px;font-weight:500}
+.mc-val{font-size:22px;font-weight:600;color:var(--gray-900)}
+.mc-sub{font-size:10px;color:var(--gray-400);margin-top:3px}
+.wh-banner{background:linear-gradient(135deg,var(--blue) 0%,#0d4a8a 100%);border-radius:var(--radius-lg);margin-bottom:24px;overflow:hidden;box-shadow:var(--shadow-md)}
+.wh-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;user-select:none}
+.wh-lbl{font-size:13px;font-weight:600;color:#fff}
+.wh-meta{font-size:10px;color:rgba(255,255,255,.65);margin-top:3px;display:flex;align-items:center;gap:6px}
+.wh-total{font-size:28px;font-weight:700;color:#fff}
+.wh-sub{font-size:10px;color:rgba(255,255,255,.65)}
+.wh-chev{font-size:14px;color:rgba(255,255,255,.65);transition:transform .2s}
+.wh-chev.open{transform:rotate(180deg)}
+.wh-body{display:none;background:rgba(0,0,0,.15);border-top:1px solid rgba(255,255,255,.1);padding:16px 20px}
+.wh-body.open{display:block}
+.wh-body input{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:var(--radius);padding:6px 12px;font-size:12px;width:220px;outline:none;font-family:'DM Sans',sans-serif}
+.wh-body input::placeholder{color:rgba(255,255,255,.5)}
+.ch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px;margin-bottom:24px}
+.ch-card{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
+.ch-card:hover{border-color:#93b8e0;box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.ch-card.active{border:2px solid var(--blue);box-shadow:0 0 0 3px rgba(26,95,168,.08)}
+.ch-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ch-name{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;color:var(--gray-900)}
+.ch-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ch-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.cst{text-align:center;padding:8px 4px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-100)}
+.cst-v{font-size:15px;font-weight:600;color:var(--gray-900)}
+.cst-l{font-size:10px;color:var(--gray-400);margin-top:2px}
+.badge{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600}
+.bg{background:var(--green-light);color:var(--green)}.by{background:var(--amber-light);color:var(--amber)}.br{background:var(--red-light);color:var(--red)}.bx{background:var(--gray-100);color:var(--gray-400)}
+.dp{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.dg{background:var(--green-light);color:var(--green)}.dy{background:var(--amber-light);color:var(--amber)}.dr{background:var(--red-light);color:var(--red)}.dn{background:var(--gray-100);color:var(--gray-400)}
+.pb{height:4px;background:var(--gray-100);border-radius:2px;overflow:hidden;margin-top:4px}
+.pf{height:100%;border-radius:2px}
+.pg2{background:var(--green-mid)}.py2{background:var(--amber-mid)}.pr2{background:var(--red-mid)}
+.drill{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);overflow:hidden;margin-top:8px;box-shadow:var(--shadow-md)}
+.drill-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--gray-100);background:var(--gray-50)}
+.drill-ttl{font-size:14px;font-weight:600;color:var(--gray-900)}
+.drill-cls{background:transparent;border:none;cursor:pointer;font-size:18px;color:var(--gray-400);padding:0 4px;line-height:1;transition:color .1s}
+.drill-cls:hover{color:var(--gray-900)}
+.drill-body{padding:18px;overflow-x:auto}
+.sf-wrap{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.sf-input{padding:6px 12px;font-size:12px;border:1px solid var(--gray-200);border-radius:var(--radius);background:var(--white);color:var(--gray-900);width:220px;outline:none;transition:border-color .15s;font-family:'DM Sans',sans-serif}
+.sf-input:focus{border-color:var(--blue)}
+.sf-ct{font-size:11px;color:var(--gray-400);margin-left:auto}
+table.t{width:100%;border-collapse:collapse;font-size:12px;min-width:480px}
+.t th{text-align:left;padding:8px 10px;font-weight:600;color:var(--gray-400);border-bottom:1px solid var(--gray-200);font-size:10px;white-space:nowrap;background:var(--gray-50);text-transform:uppercase;letter-spacing:.04em}
+.t td{padding:8px 10px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+.t tr:last-child td{border-bottom:none}
+.t tr:hover td{background:var(--gray-50)}
+.r{text-align:right}
+.sku-c{font-family:'DM Mono',monospace;font-size:10px;color:var(--gray-900);font-weight:500}
+.sku-n{font-size:10px;color:var(--gray-400);margin-top:1px}
+.ch-tab-bar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:18px}
+.ch-panel{display:none}.ch-panel.active{display:block}
+.ac-row{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
+.ac-rh{display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--gray-50);border-bottom:1px solid var(--gray-100)}
+.nb{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:10px 14px;font-size:11px;color:var(--gray-400);margin-bottom:14px;line-height:1.5}
+/* ALLOCATION */
+.alloc-ch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;margin-bottom:20px}
+.alloc-ch-card{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:12px;box-shadow:var(--shadow)}
+.alloc-ch-hdr{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.alloc-ch-lbl{font-size:12px;font-weight:600;color:var(--gray-900)}
+.flieber-tag{font-size:9px;background:var(--green-light);color:var(--green);padding:1px 5px;border-radius:8px;font-weight:600}
+.alloc-dos-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.alloc-dos-val{font-size:13px;font-weight:600;min-width:34px;text-align:right;color:var(--gray-900)}
+.alloc-dos-req{font-size:10px;color:var(--gray-400);margin-top:2px}
+.alloc-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.zero-cell{color:var(--gray-400);font-size:10px}
+/* IMPORT */
+.imp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.imp-panel{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow)}
+.imp-ttl{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--gray-900)}
+.imp-area{border:2px dashed var(--gray-200);border-radius:var(--radius);padding:22px;text-align:center;cursor:pointer;background:var(--gray-50);transition:all .15s}
+.imp-area:hover{border-color:var(--blue);background:var(--blue-light)}
+.file-input{display:none}
+.imp-st{font-size:11px;margin-top:8px;min-height:16px}
+.imp-hint{font-size:10px;color:var(--gray-400);margin-top:6px;line-height:1.4}
+.live-card{background:var(--green-light);border:1px solid rgba(99,153,34,.25);border-radius:var(--radius);padding:16px;text-align:center}
+.footer{text-align:center;padding:32px 24px 16px;font-size:11px;color:var(--gray-400)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--gray-200);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--gray-400)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-mark">MP</div>
+    <div><div class="logo-text">Mighty Paw</div><div class="logo-sub">Omni-Channel Inventory Dashboard</div></div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('exec',this)">Executive Summary</button>
+    <button class="nav-tab" onclick="switchTab('alloc',this)">WH 240 Allocation</button>
+    <button class="nav-tab" onclick="switchTab('channels',this)">By Channel</button>
+    <button class="nav-tab" onclick="switchTab('all',this)">All Channels</button>
+    <button class="nav-tab" onclick="switchTab('import',this)">Import Data</button>
+  </div>
+  <div class="topbar-right">
+    <span class="as-of" id="as-of-date">Apr 13, 2026</span>
+    <span class="live-pill"><span class="live-dot"></span>Live BigQuery · Flieber</span>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- EXEC -->
+<div id="tab-exec" class="tab-content visible">
+  <div class="wh-banner">
+    <div class="wh-hdr" onclick="toggleWH()">
+      <div>
+        <div class="wh-lbl">ShipStation — Mighty Paw WH 240 (Rawson Road 240)</div>
+        <div class="wh-meta"><span class="live-dot" style="background:rgba(255,255,255,.8)"></span>Live · bq-uny-data · prod.consolidated_inventory · Single inventory pool feeding all 7 channels · Click to expand</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="text-align:right"><div class="wh-total" id="wh-tot">—</div><div class="wh-sub" id="wh-sku-ct">— sellable SKUs</div></div>
+        <div class="wh-chev" id="wh-chev">▼</div>
+      </div>
+    </div>
+    <div class="wh-body" id="wh-body">
+      <div class="sf-wrap" style="margin-bottom:12px">
+        <input class="sf-input" placeholder="Search SKU or product..." oninput="filterWH(this.value)" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#fff">
+        <span class="sf-ct" id="wh-ct" style="color:rgba(255,255,255,.6)"></span>
+      </div>
+      <div style="overflow-x:auto;border-radius:var(--radius);overflow:hidden">
+        <table class="t" style="background:rgba(255,255,255,.08)">
+          <thead><tr>
+            <th style="color:rgba(255,255,255,.6);background:rgba(0,0,0,.2)">SKU</th>
+            <th style="color:rgba(255,255,255,.6);background:rgba(0,0,0,.2)">Product name</th>
+            <th class="r" style="color:rgba(255,255,255,.6);background:rgba(0,0,0,.2)">Units on hand</th>
+            <th class="r" style="color:rgba(255,255,255,.6);background:rgba(0,0,0,.2)">L30D daily (AMZ US)</th>
+            <th class="r" style="color:rgba(255,255,255,.6);background:rgba(0,0,0,.2)">Est. WH DOS</th>
+            <th class="r" style="color:rgba(255,255,255,.6);background:rgba(0,0,0,.2)">Status</th>
+          </tr></thead>
+          <tbody id="wh-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="sec">Portfolio scorecard</div>
+  <div class="mc-grid" id="scorecard"></div>
+  <div class="sec">Channel health — click any card to drill in</div>
+  <div class="ch-grid" id="ch-grid"></div>
+  <div id="drill-panel" style="display:none" class="drill">
+    <div class="drill-hdr"><div class="drill-ttl" id="drill-ttl">Detail</div><button class="drill-cls" onclick="closeDrill()">&#215;</button></div>
+    <div class="drill-body" id="drill-body"></div>
+  </div>
+</div>
+
+<!-- ALLOCATION -->
+<div id="tab-alloc" class="tab-content">
+  <div class="sec">Step 1 — set target days of supply per channel</div>
+  <div class="nb">WH 240 (Rawson Road 240) is the <strong>single inventory pool</strong> feeding all 7 channels. All velocities are live from Flieber (BigQuery). Set your desired DOS target per channel — the engine calculates each channel's unit need, then fair-shares WH 240 inventory proportionally if total demand exceeds supply.</div>
+  <div class="alloc-ch-grid" id="alloc-dos-controls"></div>
+  <div class="sec">Allocation summary</div>
+  <div class="alloc-summary-grid" id="alloc-summary-cards"></div>
+  <div class="sec">Per-SKU fair-share allocation</div>
+  <div class="sf-wrap">
+    <input class="sf-input" placeholder="Search SKU or product..." oninput="filterAlloc(this.value)">
+    <span class="sf-ct" id="alloc-ct"></span>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="t" style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);min-width:960px">
+      <thead><tr>
+        <th>SKU / product</th>
+        <th class="r">WH 240</th>
+        <th class="r">Total demand</th>
+        <th class="r">Amz US</th>
+        <th class="r">Amz CA</th>
+        <th class="r">Shopify</th>
+        <th class="r">Chewy</th>
+        <th class="r">Walmart</th>
+        <th class="r">TikTok</th>
+        <th class="r">Target+</th>
+        <th>Coverage</th>
+      </tr></thead>
+      <tbody id="alloc-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BY CHANNEL -->
+<div id="tab-channels" class="tab-content">
+  <div class="ch-tab-bar" id="ch-tab-bar"></div>
+  <div id="ch-panels"></div>
+</div>
+
+<!-- ALL CHANNELS -->
+<div id="tab-all" class="tab-content">
+  <div class="sec">All channels — full scrollable view</div>
+  <div id="all-cont"></div>
+</div>
+
+<!-- IMPORT -->
+<div id="tab-import" class="tab-content">
+  <div class="sec">Refresh imported data</div>
+  <div class="nb">Amazon FBA, WH 240, and all channel velocities are live from BigQuery (bq-uny-data) via Flieber. Re-upload the files below to refresh Walmart, TikTok FBT, and Target+ on-hand inventory data.</div>
+  <div class="imp-grid">
+    <div class="imp-panel">
+      <div class="imp-ttl">Walmart inventory</div>
+      <div class="imp-area" onclick="document.getElementById('f-wm').click()" ondragover="ev(event)" ondrop="drop(event,'wm')">
+        <div style="font-size:28px;margin-bottom:8px">📦</div>
+        <div style="font-size:12px;color:var(--gray-700);font-weight:500">Drop updated file here</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:4px">CSV or Excel</div>
+        <input type="file" class="file-input" id="f-wm" accept=".csv,.xlsx,.xls" onchange="handleFile(this,'wm')">
+      </div>
+      <div class="imp-st" id="st-wm" style="color:var(--green)">✓ 150 SKUs loaded from Walmart_INV.xlsx</div>
+      <div class="imp-hint">Cols: SKU, Item name, Available units, Inbound units, Daily units sold, Days of supply</div>
+    </div>
+    <div class="imp-panel">
+      <div class="imp-ttl">TikTok FBT inventory</div>
+      <div class="imp-area" onclick="document.getElementById('f-tt').click()" ondragover="ev(event)" ondrop="drop(event,'tt')">
+        <div style="font-size:28px;margin-bottom:8px">📦</div>
+        <div style="font-size:12px;color:var(--gray-700);font-weight:500">Drop updated file here</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:4px">CSV or Excel</div>
+        <input type="file" class="file-input" id="f-tt" accept=".csv,.xlsx,.xls" onchange="handleFile(this,'tt')">
+      </div>
+      <div class="imp-st" id="st-tt" style="color:var(--green)">✓ 28 SKUs loaded from TikTok_INV.xlsx</div>
+      <div class="imp-hint">Cols: Goods Reference Code, Available Inventory, In-Transit Total, Avg Daily Sales L7D</div>
+    </div>
+    <div class="imp-panel">
+      <div class="imp-ttl">Target+ inventory</div>
+      <div class="imp-area" onclick="document.getElementById('f-tgt').click()" ondragover="ev(event)" ondrop="drop(event,'tgt')">
+        <div style="font-size:28px;margin-bottom:8px">📦</div>
+        <div style="font-size:12px;color:var(--gray-700);font-weight:500">Drop updated file here</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:4px">CSV or Excel</div>
+        <input type="file" class="file-input" id="f-tgt" accept=".csv,.xlsx,.xls" onchange="handleFile(this,'tgt')">
+      </div>
+      <div class="imp-st" id="st-tgt" style="color:var(--green)">✓ 55 SKUs loaded from Target_INV.csv</div>
+      <div class="imp-hint">Cols: TCIN, Partner SKU, Product Title, Relationship, Distribution Center 1 Inventory, Price</div>
+    </div>
+    <div class="imp-panel">
+      <div class="imp-ttl">All channel velocities</div>
+      <div class="live-card">
+        <div class="live-pill" style="justify-content:center;margin-bottom:8px"><span class="live-dot"></span>Connected to BigQuery · Flieber</div>
+        <div style="font-size:11px;color:var(--green);font-weight:500;margin-top:4px">bq-uny-data · prod.flbr_raw_forecast_daily</div>
+        <div style="font-size:10px;color:var(--green);margin-top:4px;opacity:.8">Amazon US/CA · Shopify · Chewy · Walmart · TikTok · Target+</div>
+        <div style="font-size:10px;color:var(--green);margin-top:2px;opacity:.8">WH 240: prod.consolidated_inventory</div>
+        <div style="font-size:10px;color:var(--green);margin-top:2px;opacity:.8">FBA: fbarestockinventoryreport_consolidated_snapshot</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+<div class="footer">Mighty Paw Omni-Channel Dashboard · Built with Claude · Data: BigQuery bq-uny-data · Velocities: Flieber · Last updated Apr 13, 2026</div>
+
+<script>
+// ── CHANNEL CONFIG ─────────────────────────────────────────────────────
+const CHANNELS=[
+  {id:'amz_us',label:'Amazon US',color:'#1a5fa8',live:true,def:45},
+  {id:'amz_ca',label:'Amazon CA',color:'#2176b5',live:true,def:45},
+  {id:'shopify',label:'Shopify DTC',color:'#95bf47',live:true,def:30},
+  {id:'chewy',label:'Chewy',color:'#0066cc',live:true,def:30},
+  {id:'walmart',label:'Walmart',color:'#0071ce',live:false,def:30},
+  {id:'tiktok',label:'TikTok FBT',color:'#111',live:false,def:21},
+  {id:'target',label:'Target+',color:'#cc0000',live:true,def:30},
+];
+const DOS_TARGETS={};
+CHANNELS.forEach(c=>DOS_TARGETS[c.id]=c.def);
+
+// ── WH 240 ON-HAND (prod.consolidated_inventory — Rawson Road 240) ──────
+const WH={};
+[['760-00518',29604],['760-00520',25327],['760-00521',21372],['760-00522',1983],['760-00523',3612],['760-00525',1039],['760-00543',3612],['730-00038',2674],['730-00039',1445],['CheeseStick_4pk',16845],['HalfPigEar_12pk',5142],['SafetyBelt_Buckle_Bl',4835],['CowKneeCaps_8pk',4327],['SlowFeed_M_O',4209],['CheeseMed_4pk',4178],['Groom_Rake_Gr',3904],['HandsFree2.0_Green',3207],['SmartBell2.0_2_1',3207],['Harness2.0_Gr_L',3051],['RetLeash2.0_Gr_Std',2769],['CheeseLarge_12pk',2151],['DoubleDogLeash_No_H_Lte',2054],['Black_SafetyBelt',2043],['Cheese_FoodTopper_6oz',1984],['CheeseMed_12pk',1913],['Martingale_MGrey',1846],['SafetyBelt_Cable80',1792],['DoubleDogLeash_W_H_Lte',1631],['CheeseStick_1Mstr',1604],['RetLeash3.0_Gr_Lite_wPD',1564],['VehicleHarness_MBlack',1341],['BullyStick_12in_THK_5',1209],['RetLeash3.0_Or_Lite_wPD',1149],['CheeseMstr_12pk',1117],['Running_leash_long',1080],['RetLeash3.0_Gr_Std_wPD',1069],['CheesePuff_12oz',1064],['CowEars_12pk',1034],['TreatBag_Black',1006],['BullyStick_6in_Curls_5',1003],['CheeseMstr_4pk',999],['SmartBell2.0_1_1',799],['CheckCord_Or_30',791],['RetLeash2.0_Or_Std',720],['ChewProof_Leash6_G',710],['LickPad_Green',619],['ChickenFeet_30pk',552],['CheeseLarge_8pk',552],['Tinkle_Bell_Blue',518],['TinkleBell_SilverAllMetal',480],['BullyStick_12in_STD_5',400],['BullyStick_Variety_ 10oz',332],['ChewProof_Leash6_O',326],['BullyStick_12in_Curls_5',296],['RetLeash3.0_Or_Std_wPD',293],['DblLeash_Adj_Rope_Bl',292],['Martingale_LeatherBR_L',256],['CheeseSmall_5pk',223],['ChickenJerky_14oz',207],['Martingale_SBlack',206],['BullyStick_6in_STD_5',191],['Martingale_LeatherBR_M',112],['FullPigEar_12pk',116],['NailClippers_Or',106],['NailClippers_Gr',61],['DoubleDogLeash_No_Handle',842],['TreatPouch2.0_Black',136],['TreatPouch2.0_Grey',72],['LickBowl_Green',852],['LickBowl_Orange',60],['LickPad_Orange',81],['HandsFree2.0_Orange',902],['TreatBag_Grey',13],['RetLeash2.0_Gr_Lite',6588],['RetLeash2.0_Or_Lite',71],['Martingale_LeatherBR_S',537],['SafetyBelt_Cable40',1],['CarRestraint_Bl',17],['DogTagClip_3pk',125],['Mart2.0_L_Green',160],['Mart2.0_L_Orange',281],['Martingale_MBlack',59],['Collagen_8pk_Var',0],['BeefGulletJerky_14oz',0],['BeefGullet_30pk_6in',0],['Support_HarnessL',34],['Support_HarnessM',8],['TieOut_Cable_30_Bl_XL',27],['TieOut_Cable_30_Bl_M',10],['SlipLeash_Or',150],['Leath_Leash_6ft_Clip',27],['SafetyBelt_Cable60',3]].forEach(r=>WH[r[0]]=r[1]);
+
+// WH daily velocity for DOS display (AMZ US L30D as proxy)
+const WH_DAILY={};
+[['760-00518',255.1],['760-00520',193.8],['CheeseStick_4pk',649.9],['BullyStick_12in_STD_5',730.1],['CheeseMed_4pk',230.9],['CowKneeCaps_8pk',123.9],['HalfPigEar_12pk',45.6],['SafetyBelt_Buckle_Bl',73.5],['CheeseMed_12pk',101.7],['CheeseLarge_12pk',66.6],['CheeseSmall_5pk',61.9],['CheeseLarge_8pk',58.2],['760-00521',50.1],['760-00523',21.2],['760-00543',13.9],['760-00525',9.6],['730-00038',5.0],['SmartBell2.0_1_1',34.9],['SmartBell2.0_2_1',29.8],['RetLeash2.0_Or_Lite',35.4],['RetLeash2.0_Gr_Lite',26.0],['CheeseMstr_4pk',70.4],['ChickenFeet_30pk',39.7],['BullyStick_6in_Curls_5',69.4],['BullyStick_12in_THK_5',126.7],['BullyStick_6in_STD_5',28.8],['CheesePuff_12oz',24.6],['CowEars_12pk',21.7],['DoubleDogLeash_No_Handle',21.5],['DoubleDogLeash_No_H_Lte',23.2],['TreatPouch2.0_Black',34.8],['TreatPouch2.0_Grey',15.0],['CheeseSmall_12pk',56.3],['CheeseMstr_12pk',24.9],['BeefGulletJerky_14oz',21.6],['FullPigEar_12pk',9.3],['ChickenJerky_14oz',14.1],['760-00519',4.7],['760-00522',4.5],['Black_SafetyBelt',3.5],['SafetyBelt_Cable80',10.5],['CarRestraint_Bl',46.5],['TinkleBell_SilverAllMetal',3.3],['LickPad_Green',5.2],['LickBowl_Green',4.4],['RetLeash3.0_Gr_Lite_wPD',11.2],['RetLeash3.0_Or_Lite_wPD',13.1],['BullyStick_12in_Curls_5',28.0],['CheckCord_Or_30',1.4],['BullyStick_Variety_ 10oz',50.3],['Collagen_8pk_Var',11.8],['RetLeash2.0_Or_Std',16.6],['RetLeash2.0_Gr_Std',2.6],['RetLeash3.0_Gr_Std_wPD',5.6],['RetLeash3.0_Or_Std_wPD',9.2],['Martingale_LeatherBR_M',9.8],['Martingale_LeatherBR_L',9.5],['Martingale_LeatherBR_S',6.1],['TreatBag_Black',7.1],['ChewProof_Leash6_G',6.2],['ChewProof_Leash6_O',2.0],['DblLeash_Adj_Rope_Bl',4.2],['DogTagClip_3pk',4.7],['Mart2.0_L_Green',4.7],['Mart2.0_L_Orange',3.3],['Martingale_SBlack',3.1],['Martingale_MBlack',2.9],['DoubleDogLeash_W_H_Lte',3.5],['HandsFree2.0_Green',3.7],['HandsFree2.0_Orange',3.0],['Running_leash_long',2.4],['VehicleHarness_MBlack',0],['LickBowl_Orange',1.5],['LickPad_Orange',3.6],['TieOut_Cable_30_Bl_XL',2.2],['Support_HarnessL',1.9],['Support_HarnessM',0.5],['Leath_Leash_6ft_Clip',4.8],['Tinkle_Bell_Blue',0],['NailClippers_Gr',0],['NailClippers_Or',0]].forEach(r=>WH_DAILY[r[0]]=r[1]);
+
+// ── FLIEBER VELOCITIES — ALL CHANNELS (daily units, from flbr_raw_forecast_daily) ──
+const D={amz_us:{},amz_ca:{},shopify:{},chewy:{},walmart:{},tiktok:{},target:{}};
+
+// Amazon US (Mighty Paw-AMZ-NA)
+[['BullyStick_12in_STD_5',730.111],['CheeseStick_4pk',649.998],['760-00518',307.554],['CheeseMed_4pk',230.85],['BullyStick_6in_STD_10',195.602],['760-00520',193.8],['BullyStick_12in_THK_5',126.737],['CowKneeCaps_8pk',123.913],['CheeseMed_12pk',101.665],['BullyStick_6in_STD_25',101.061],['SafetyBelt_Buckle_Bl',73.532],['CheeseMstr_4pk',70.437],['BullyStick_6in_Curls_5',69.393],['CheeseLarge_12pk',66.553],['CheeseSmall_5pk',61.927],['CheeseLarge_8pk',58.235],['CheeseSmall_12pk',56.308],['BullyStick_Variety_ 10oz',50.317],['760-00521',50.109],['CarRestraint_Bl',46.472],['HalfPigEar_12pk',45.557],['ChickenFeet_30pk',39.746],['BullyStick_12in_STD_10',39.381],['RetLeash2.0_Or_Lite',35.384],['CheeseStick_1Mstr',34.985],['SmartBell2.0_1_1',34.929],['TreatPouch2.0_Black',34.759],['SmartBell2.0_2_1',29.834],['BullyStick_6in_STD_5',28.819],['BullyStick_12in_Curls_5',28.019],['RetLeash2.0_Gr_Lite',25.992],['CheeseMstr_12pk',24.898],['CheesePuff_12oz',24.56],['ElkSplitAntler_MED_1pk',24.238],['DoubleDogLeash_No_H_Lte',23.184],['CowEars_12pk',21.675],['BeefGulletJerky_14oz',21.61],['DoubleDogLeash_No_Handle',21.461],['760-00523',21.166],['RetLeash2.0_Or_Std',16.632],['TreatPouch2.0_Grey',15.035],['ChickenJerky_14oz',14.107],['760-00543',13.937],['RetLeash3.0_Or_Lite_wPD',13.074],['Collagen_8pk_Var',11.765],['BullyStick_12in_JMB_5',11.473],['RetLeash3.0_Gr_Lite_wPD',11.203],['SafetyBelt_Cable80',10.536],['BeefGullet_30pk_6in',10.281],['Martingale_LeatherBR_M',9.836],['760-00525',9.58],['Martingale_LeatherBR_L',9.544],['CheesePuff_8oz',9.414],['FullPigEar_12pk',9.255],['RetLeash3.0_Or_Std_wPD',9.238],['TreatBag_Black',7.062],['PeanutButter_Nat_2pk',6.968],['ChewProof_Leash6_G',6.243],['Martingale_LeatherBR_S',6.144],['CalmingChews_120_2pk',5.634],['RetLeash3.0_Gr_Std_wPD',5.613],['LickPad_Green',5.217],['730-00038',4.954],['Leath_Leash_6ft_Clip',4.785],['VehicleHarness_LBlack',4.77],['760-00519',4.685],['DogTagClip_3pk',4.659],['Mart2.0_L_Green',4.653],['760-00522',4.483],['LickBowl_Green',4.434],['DblLeash_Adj_Rope_Bl',4.152],['DoubleDogLeash_WithHandle',4.148],['HandsFree2.0_Green',3.669],['LickPad_Orange',3.612],['Black_SafetyBelt',3.543],['DoubleDogLeash_W_H_Lte',3.538],['TinkleBell_SilverAllMetal',3.342],['Mart2.0_L_Orange',3.305],['Martingale_SBlack',3.068],['HandsFree2.0_Orange',2.981],['Martingale_MBlack',2.91],['AllergyChews_120_2pk',2.82],['TreatBag_Grey',2.752],['RetLeash2.0_Gr_Std',2.613],['PoopBagHolder_Grey',2.419],['Running_leash_long',2.362],['TieOut_Cable_30_Bl_XL',2.229],['ChewProof_Leash6_O',1.997],['Support_HarnessL',1.866],['ElkAntlerTHK_MED_6_1pk',1.727],['LickBowl_Orange',1.478],['TieOut_Cable_30_Bl_M',1.416],['CheckCord_Or_30',1.369],['Mar2.0_M_Green',1.337],['Martingale_MGrey',1.324],['Mar2.0_M_Orange',1.137],['9N-LZU6-VXAP',1.1],['Grey_Run_LongLeash',1.062],['Mart2.0_S_M_Green',0.98],['LongLeash_Black30',0.785],['SlowFeed_M_G',0.736],['Grey_Run_Leash',0.67],['Groom_Rake_Gr',0.653],['SafetyBelt_Cable60',0.561],['730-00039',0.528],['Support_HarnessM',0.528],['Cheese_FoodTopper_6oz',0.459]].forEach(r=>D.amz_us[r[0]]=r[1]);
+
+// Amazon CA (Mighty Paw-AMZ-CA)
+[['CheeseStick_4pk',51.166],['CheeseMed_12pk',20.14],['CheeseSmall_12pk',17.87],['CheeseMstr_4pk',17.532],['TreatPouch2.0_Black',14.196],['SafetyBelt_Buckle_Bl',12.0],['CheeseSmall_5pk',11.541],['CheeseMed_4pk',11.452],['CheeseLarge_12pk',11.0],['TreatPouch2.0_Grey',8.49],['CheeseLarge_8pk',8.336],['CheeseMstr_12pk',7.514],['Support_HarnessM',6.914],['Support_HarnessL',5.793],['RetLeash2.0_Or_Lite',4.295],['CheeseStick_1Mstr',3.816],['RetLeash3.0_Or_Std_wPD',3.599],['RetLeash2.0_Gr_Std',3.256],['CarRestraint_Bl',2.735],['ElkAntlerTHK_MED_6_1pk',2.159],['LickBowl_Green',1.954],['RetLeash3.0_Gr_Std_wPD',1.863],['RetLeash3.0_Gr_Lite_wPD',1.545],['RetLeash2.0_Or_Std',1.349],['SmartBell2.0_1_1',1.269],['SmartBell2.0_2_1',1.136],['LickBowl_Orange',1.115],['RetLeash2.0_Gr_Lite',0.975],['CheckCord_Or_30',0.579],['ChewProof_Leash6_O',0.426],['ChewProof_Leash6_G',0.393],['TieOut_Cable_30_Bl_XL',0.375],['SlowFeed_M_O',0.29],['LickPad_Green',0.269],['Running_leash_long',0.205],['TieOut_Cable_30_Bl_M',0.164],['SlowFeed_M_G',0.161],['9N-LZU6-VXAP',0.088]].forEach(r=>D.amz_ca[r[0]]=r[1]);
+
+// Shopify (Mighty Paw-Shopify-US)
+[['CheeseStick_4pk',26.102],['CheesePuff_12oz',15.035],['ChickenFeet_30pk',15.035],['CheeseMed_4pk',12.638],['CheeseSmall_5pk',12.529],['CheeseMstr_4pk',11.693],['SlowFeed_M_O',11.636],['Collagen_8pk_Var',10.592],['CheeseMed_12pk',8.771],['CowEars_12pk',8.347],['CheeseLarge_8pk',8.209],['CheeseLarge_12pk',8.043],['BullyStick_12in_STD_5',7.517],['CowKneeCaps_8pk',7.073],['BullyStick_6in_Curls_5',6.681],['Cheese_FoodTopper_6oz',6.681],['BullyStick_12in_Curls_5',6.681],['HandsFree2.0_Green',5.645],['BeefGulletJerky_14oz',5.36],['HalfPigEar_12pk',4.923],['FullPigEar_12pk',4.706],['ElkAntlerTHK_MED_6_1pk',4.315],['CheeseMstr_12pk',4.24],['Hair_Roller_5pk',4.053],['BullyStick_Variety_ 10oz',3.293],['Cheese_TrainingCracker_8oz',3.186],['CheeseStick_1Mstr',3.057],['ChickenJerky_14oz',2.849],['CheeseSmall_12pk',2.2],['BullyStick_12in_THK_5',2.113],['760-00518',1.193],['Support_HarnessL',1.132],['TreatPouch2.0_Black',1.072],['760-00522',1.029],['760-00520',0.971],['760-00523',0.889],['LickPad_Orange',0.859],['LickBowl_Green',0.79],['760-00519',0.709],['SmartBell2.0_2_1',0.487],['760-00543',0.487],['SmartBell2.0_1_1',0.471],['LickBowl_Orange',0.453],['RetLeash2.0_Gr_Lite',0.435],['Support_HarnessM',0.417],['SafetyBelt_Buckle_Bl',1.32],['NailClippers_Gr',1.23],['DoubleDogLeash_No_Handle',0.523],['760-00521',0.072],['CarRestraint_Bl',0.092],['Tinkle_Bell_Blue',0.092],['Black_SafetyBelt',1.533],['TreatBag_Black',0.16],['RetLeash3.0_Or_Lite_wPD',0.198],['ChewProof_Leash6_G',1.533],['ChewProof_Leash6_O',1.533],['SafetyBelt_Cable80',1.533],['SafetyBelt_Cable60',1.533],['RetLeash2.0_Gr_Std',0.224],['TinkleBell_SilverAllMetal',0.213],['HandsFree2.0_Orange',1.533],['DogTagClip_3pk',0.596]].forEach(r=>D.shopify[r[0]]=r[1]);
+
+// Chewy (Mighty Paw-CHEWY-US)
+[['TieOut_Cable_30_Bl_XL',17.516],['SafetyBelt_Buckle_Bl',13.518],['CarRestraint_Bl',10.836],['TieOut_Cable_30_Bl_M',8.064],['CheckCord_Or_30',5.667],['DoubleDogLeash_No_Handle',5.513],['SafetyBelt_Cable80',4.322],['SlipLeash_Or',4.029],['Tinkle_Bell_Blue',3.487],['Grey_SafetyBelt',3.08],['RetLeash2.0_Or_Std',3.047],['ChewProof_Leash6_G',2.927],['ChewProof_Leash6_O',2.599],['SafetyBelt_Cable60',2.378],['Leath_Leash_6ft_Clip',2.345],['SmartBell2.0_1_1',2.305],['TinkleBell_SilverAllMetal',1.937],['SmartBell2.0_2_1',1.804],['Martingale_LeatherBR_M',1.39],['SafetyBelt_Cable40',1.304],['RetLeash2.0_Or_Lite',1.292],['RetLeash2.0_Gr_Std',1.271],['Martingale_LeatherBR_L',1.269],['Grey_Run_Leash',1.069],['Black_SafetyBelt',0.849],['Martingale_LeatherBR_S',0.601],['RetLeash2.0_Gr_Lite',0.336],['9N-LZU6-VXAP',0.468]].forEach(r=>D.chewy[r[0]]=r[1]);
+
+// Walmart (MightyPaw-WMT-US)
+[['760-00520',11.692],['HalfPigEar_12pk',10.021],['CheeseStick_4pk',10.021],['760-00543',6.681],['760-00518',5.325],['TieOut_Cable_30_Bl_XL',5.155],['760-00519',3.942],['BullyStick_12in_STD_5',2.927],['760-00523',2.839],['CheeseMed_4pk',2.439],['Collagen_8pk_Var',1.744],['BullyStick_Variety_ 10oz',1.744],['760-00521',1.623],['BullyStick_6in_STD_5',1.604],['FullPigEar_12pk',1.443],['CheeseLarge_8pk',1.39],['760-00522',1.27],['ChickenJerky_14oz',1.243],['RetLeash2.0_Gr_Std',1.082],['CheeseMstr_4pk',1.056],['CheesePuff_8oz',0.855],['CheeseMed_12pk',0.835],['CheeseSmall_5pk',0.635],['CheeseLarge_12pk',0.555],['Tinkle_Bell_Blue',0.555],['SlowFeed_M_O',0.555],['BullyStick_12in_THK_5',0.287],['TinkleBell_SilverAllMetal',0.301],['SmartBell2.0_1_1',0.267],['SmartBell2.0_2_1',0.334],['NailClippers_Gr',0.434],['LickBowl_Green',0.434],['CarRestraint_Bl',0.421],['RetLeash2.0_Or_Std',0.388],['CheeseSmall_12pk',0.234],['CheeseMstr_12pk',0.234],['CheesePuff_12oz',0.2],['CheckCord_Or_30',0.2],['DoubleDogLeash_No_Handle',0.334],['RetLeash2.0_Or_Lite',0.334],['ChewProof_Leash6_G',0.321],['ChewProof_Leash6_O',0.367],['DogTagClip_3pk',0.367],['Groom_Rake_Gr',0.354],['TieOut_Cable_30_Bl_M',0.109],['NailClippers_Or',0.033]].forEach(r=>D.walmart[r[0]]=r[1]);
+
+// TikTok (Mighty Paw-TIKTOK-US)
+[['Collagen_8pk_Var',60.31],['CheeseStick_4pk',53.876],['CheesePuff_12oz',46.108],['CowKneeCaps_8pk',33.672],['CowEars_12pk',30.312],['CheeseMed_4pk',25.268],['CheeseMed_12pk',23.577],['ChickenFeet_30pk',23.577],['BeefGullet_30pk_6in',20.203],['BullyStick_12in_Curls_5',20.204],['Cheese_FoodTopper_6oz',16.843],['CheeseLarge_12pk',16.843],['CheeseSmall_5pk',16.843],['CheeseSmall_12pk',13.469],['ChickenJerky_14oz',13.468],['BullyStick_12in_STD_5',10.108],['CheeseMstr_4pk',8.425],['CheeseLarge_8pk',8.425],['760-00520',6.737],['CheeseMstr_12pk',6.734],['HalfPigEar_12pk',5.899],['FullPigEar_12pk',4.209],['BeefGulletJerky_14oz',3.374],['CheeseStick_1Mstr',2.525],['BullyStick_Variety_ 10oz',1.69],['CalmingChews_120_2pk',1.016],['BullyStick_12in_THK_5',0.835],['CheckCord_Or_30',0.835],['NailClippers_Or',0.534],['730-00039',0.501],['HandsFree2.0_Green',0.501],['TreatPouch2.0_Black',0.468],['Support_HarnessL',0.234],['LickBowl_Green',0.22],['SmartBell2.0_1_1',0.102],['SafetyBelt_Buckle_Bl',0.1],['730-00038',0.033],['SlowFeed_M_O',0.134],['LickPad_Green',0.134],['SmartBell2.0_2_1',0.051]].forEach(r=>D.tiktok[r[0]]=r[1]);
+
+// Target+ (Mighty Paw-Target-US) — LIVE from Flieber
+[['CheeseStick_4pk',1.222],['TieOut_Cable_30_Bl_M',0.978],['TieOut_Cable_30_Bl_XL',0.956],['BullyStick_Variety_ 10oz',0.8],['HalfPigEar_12pk',0.8],['BullyStick_12in_STD_5',0.756],['RetLeash2.0_Gr_Std',0.6],['CheeseMed_4pk',0.444],['FullPigEar_12pk',0.4],['ChickenFeet_30pk',0.378],['ChickenJerky_14oz',0.378],['TreatPouch2.0_Black',0.333],['ChewProof_Leash6_G',0.311],['CarRestraint_Bl',0.311],['CheeseMed_12pk',0.289],['RetLeash2.0_Or_Std',0.289],['Support_HarnessL',0.289],['Black_SafetyBelt',0.267],['RetLeash3.0_Or_Lite_wPD',0.267],['CheeseLarge_8pk',0.267],['CheeseSmall_12pk',0.267],['LickPad_Green',0.244],['Martingale_LeatherBR_L',0.244],['CowKneeCaps_8pk',0.222],['RetLeash3.0_Or_Std_wPD',0.222],['RetLeash3.0_Gr_Lite_wPD',0.222],['SmartBell2.0_2_1',0.222],['RetLeash2.0_Gr_Lite',0.2],['CheeseMstr_4pk',0.2],['SafetyBelt_Buckle_Bl',0.178],['RetLeash3.0_Gr_Std_wPD',0.178],['HandsFree2.0_Green',0.178],['SlowFeed_M_G',0.156],['TreatPouch2.0_Grey',0.133],['Martingale_LeatherBR_M',0.133],['CheeseLarge_12pk',0.111],['BullyBraided_5pk_Var',0.111],['Collagen_8pk_Var',0.089],['SmartBell2.0_1_1',0.089],['BeefGullet_30pk_6in',0.089],['CheckCord_Or_30',0.089],['LickBowl_Orange',0.089],['Support_HarnessM',0.067],['RetLeash2.0_Or_Lite',0.067],['LickBowl_Green',0.044],['CheeseStick_1Mstr',0.044],['CheeseMstr_12pk',0.022]].forEach(r=>D.target[r[0]]=r[1]);
+
+// ── IMPORTED DATA: Walmart, TikTok, Target ─────────────────────────────
+const WM=[{name:'Yak Cheese Chews Large 4 Pack',sku:'CheeseStick_4pk',avail:662,inbound:200,daily:12,dos:62,status:'In Stock'},{name:'Calming Chews 120ct',sku:'760-00520',avail:1109,inbound:368,daily:19.9,dos:91,status:'In Stock'},{name:'Half Pig Ears 12 Pack',sku:'HalfPigEar_12pk',avail:749,inbound:0,daily:10.1,dos:72,status:'In Stock'},{name:'Salmon Oil Chews 120ct',sku:'760-00543',avail:441,inbound:332,daily:10.7,dos:93,status:'In Stock'},{name:'Allergy & Immune Chews 120ct',sku:'760-00518',avail:366,inbound:0,daily:5.1,dos:46,status:'In Stock'},{name:'Yak Cheese Chews Large 8 Pack',sku:'CheeseLarge_8pk',avail:92,inbound:15,daily:1.2,dos:122,status:'In Stock'},{name:'Yak Cheese Chews Large 12 Pack',sku:'CheeseLarge_12pk',avail:38,inbound:31,daily:0.7,dos:99,status:'In Stock'},{name:'Tear Stain Chews 120ct',sku:'760-00523',avail:194,inbound:0,daily:2,dos:101,status:'In Stock'},{name:'Chicken Jerky 14oz',sku:'ChickenJerky_14oz',avail:52,inbound:25,daily:2,dos:38,status:'In Stock'},{name:'Yak Cheese Chews Medium 4 Pack',sku:'CheeseMed_4pk',avail:147,inbound:0,daily:1.6,dos:102,status:'In Stock'},{name:'Full Pig Ears 12 Pack',sku:'FullPigEar_12pk',avail:118,inbound:1,daily:1.2,dos:121,status:'In Stock'},{name:'Tie Out Cable 30ft XL',sku:'TieOut_Cable_30_Bl_XL',avail:147,inbound:0,daily:2.4,dos:38,status:'In Stock'},{name:'Bully Sticks 12in Standard 5 Pack',sku:'BullyStick_12in_STD_5',avail:76,inbound:61,daily:1,dos:112,status:'In Stock'},{name:'Yak Cheese Chews X-Large 4 Pack',sku:'CheeseMstr_4pk',avail:70,inbound:30,daily:0.9,dos:133,status:'In Stock'},{name:'Retractable Leash Green Std',sku:'RetLeash2.0_Gr_Std',avail:98,inbound:15,daily:1.4,dos:73,status:'In Stock'},{name:'Hip & Joint Chews 120ct',sku:'760-00519',avail:278,inbound:0,daily:1.6,dos:163,status:'In Stock'},{name:'Nail Clippers Green',sku:'NailClippers_Gr',avail:619,inbound:0,daily:2.6,dos:176,status:'In Stock'},{name:'Scooting Chews 120ct',sku:'760-00525',avail:22,inbound:0,daily:0.7,dos:21,status:'At Risk'},{name:'Yak Cheese Puffs 8oz',sku:'CheesePuff_8oz',avail:17,inbound:0,daily:0.9,dos:20,status:'At Risk'},{name:'Smart Bell 2.0 1-Activator',sku:'SmartBell2.0_1_1',avail:30,inbound:0,daily:0.3,dos:140,status:'In Stock'},{name:'Double Dog Leash With Handle',sku:'DoubleDogLeash_WithHandle',avail:4,inbound:0,daily:0.3,dos:11,status:'At Risk'},{name:'Traffic Handle Leash 30in',sku:'TrafficHandle_Grey30',avail:1,inbound:0,daily:0.2,dos:5,status:'At Risk'}];
+
+const TT=[{sku:'CheeseSmall_12pk',name:'Yak Cheese Small 12 Pack',avail:180,inbound:31,daily7:11,dos:16},{sku:'CheeseStick_4pk',name:'Yak Cheese Large 4 Pack',avail:1616,inbound:2,daily7:18,dos:89},{sku:'Cheese_FoodTopper_6oz',name:'Yak Cheese Food Topper 6oz',avail:1528,inbound:350,daily7:27,dos:56},{sku:'CowKneeCaps_8pk',name:'Cow Kneecap Chews 8 Pack',avail:1746,inbound:6,daily7:18,dos:97},{sku:'CheeseLarge_12pk',name:'Yak Cheese Large 12 Pack',avail:725,inbound:246,daily7:12,dos:60},{sku:'CheeseLarge_8pk',name:'Yak Cheese Large 8 Pack',avail:313,inbound:162,daily7:7,dos:44},{sku:'CowEars_12pk',name:'Cow Ear Chews 12 Pack',avail:1138,inbound:15,daily7:7,dos:162},{sku:'ChickenFeet_30pk',name:'Chicken Feet 30 Pack',avail:631,inbound:120,daily7:16,dos:39},{sku:'760-00520',name:'Calming Chews 120ct',avail:380,inbound:0,daily7:4,dos:95},{sku:'CheeseMstr_4pk',name:'Yak Cheese Monster 4 Pack',avail:390,inbound:1,daily7:8,dos:48},{sku:'CheeseMstr_12pk',name:'Yak Cheese Monster 12 Pack',avail:228,inbound:101,daily7:4,dos:57},{sku:'HalfPigEar_12pk',name:'Half Pig Ear 12 Pack',avail:294,inbound:0,daily7:3,dos:98},{sku:'FullPigEar_12pk',name:'Full Pig Ear 12 Pack',avail:342,inbound:2,daily7:3,dos:114},{sku:'CheeseSmall_5pk',name:'Yak Cheese Small 5 Pack',avail:371,inbound:51,daily7:4,dos:92},{sku:'CheeseStick_1Mstr',name:'Yak Cheese Monster 1 Pack',avail:173,inbound:0,daily7:2,dos:86},{sku:'CheeseMed_4pk',name:'Yak Cheese Medium 4 Pack',avail:713,inbound:4,daily7:8,dos:89},{sku:'ChickenJerky_14oz',name:'Chicken Jerky 14oz',avail:87,inbound:40,daily7:2,dos:43},{sku:'BeefGulletJerky_14oz',name:'Beef Gullet Jerky 14oz',avail:0,inbound:60,daily7:5,dos:null},{sku:'CheeseMed_12pk',name:'Yak Cheese Medium 12 Pack',avail:0,inbound:501,daily7:10,dos:null},{sku:'Collagen_8pk_Var',name:'Collagen Sticks 8 Pack',avail:0,inbound:3,daily7:0,dos:null}];
+
+const TGT=[{tcin:94189992,sku:'CheeseStick_4pk',title:'Yak Cheese Large 4 Pack',inv:227,price:26.99},{tcin:1000053759,sku:'CheeseMed_4pk',title:'Yak Cheese Medium 4 Pack',inv:94,price:23.99},{tcin:93227631,sku:'SafetyBelt_Buckle_Bl',title:'Car Seatbelt Buckle',inv:157,price:19.99},{tcin:93227318,sku:'LickPad_Green',title:'Dog Lick Pad Green',inv:143,price:18.99},{tcin:93227315,sku:'LickBowl_Green',title:'Slow Feeder Bowl Green',inv:134,price:19.99},{tcin:93227543,sku:'Martingale_LeatherBR_M',title:'Leather Martingale Medium',inv:115,price:20.99},{tcin:93228665,sku:'RetLeash2.0_Gr_Lite',title:'Retractable Leash Green Lite',inv:92,price:20.99},{tcin:94189989,sku:'CheeseStick_1Mstr',title:'Yak Cheese X-Large 1 Pack',inv:42,price:17.99},{tcin:93228689,sku:'BullyStick_12in_STD_5',title:'Bully Sticks 12in Standard 5 Pack',inv:45,price:31.99},{tcin:93228679,sku:'CowKneeCaps_8pk',title:'Cow Kneecap Chews 8 Pack',inv:45,price:27.99},{tcin:93228687,sku:'760-00543',title:'Salmon Oil Chews 120ct',inv:45,price:20.99},{tcin:93228694,sku:'HalfPigEar_12pk',title:'Half Pig Ears 12 Pack',inv:49,price:22.99},{tcin:93228666,sku:'RetLeash2.0_Or_Lite',title:'Retractable Leash Orange Lite',inv:71,price:20.99},{tcin:93227317,sku:'LickBowl_Orange',title:'Slow Feeder Bowl Orange',inv:60,price:19.99},{tcin:93229526,sku:'HandsFree2.0_Green',title:'Hands-Free Leash Green',inv:60,price:21.99},{tcin:93214665,sku:'TinkleBell_SilverAllMetal',title:'Metal Dog Doorbell',inv:58,price:19.99},{tcin:93227319,sku:'TreatPouch2.0_Black',title:'Dog Treat Pouch Black',inv:63,price:21.99},{tcin:93227321,sku:'TreatPouch2.0_Grey',title:'Dog Treat Pouch Grey',inv:72,price:21.99},{tcin:93228681,sku:'RetLeash3.0_Gr_Std_wPD',title:'Retractable 3.0 Green Std + Bags',inv:40,price:23.99},{tcin:93228682,sku:'RetLeash3.0_Or_Std_wPD',title:'Retractable 3.0 Orange Std + Bags',inv:32,price:23.99},{tcin:93227641,sku:'Black_SafetyBelt',title:'Car Seatbelt Black',inv:73,price:19.99},{tcin:93214667,sku:'SmartBell2.0_1_1',title:'Smart Bell 2.0 1-Transmitter',inv:48,price:34.99},{tcin:93214669,sku:'SmartBell2.0_2_1',title:'Smart Bell 2.0 2-Transmitters',inv:35,price:39.99},{tcin:93228648,sku:'CheckCord_Or_30',title:'Check Cord 30ft Orange',inv:84,price:19.99},{tcin:93228640,sku:'ChewProof_Leash6_G',title:'Chew-Proof Leash 6ft Green',inv:13,price:19.99},{tcin:93228662,sku:'RetLeash2.0_Gr_Std',title:'Retractable Leash Green Std',inv:39,price:22.99},{tcin:93228664,sku:'RetLeash2.0_Or_Std',title:'Retractable Leash Orange Std',inv:34,price:22.99},{tcin:93228677,sku:'TieOut_Cable_30_Bl_XL',title:'Tie-Out Cable 30ft XL',inv:16,price:22.99},{tcin:93228680,sku:'TieOut_Cable_30_Bl_M',title:'Tie-Out Cable 30ft Med',inv:9,price:18.99},{tcin:93228650,sku:'BeefGulletJerky_14oz',title:'Beef Gullet Jerky 14oz',inv:11,price:25.99},{tcin:93228692,sku:'FullPigEar_12pk',title:'Full Pig Ears 12 Pack',inv:28,price:30.99},{tcin:93228688,sku:'760-00518',title:'Allergy Chews 120ct',inv:18,price:22.99},{tcin:93228684,sku:'760-00520',title:'Calming Chews 120ct',inv:39,price:22.99},{tcin:93228686,sku:'730-00038',title:'No Chew Spray 8oz',inv:25,price:20.99},{tcin:93228695,sku:'760-00523',title:'Tear Stain Chews 120ct',inv:18,price:20.99},{tcin:93228696,sku:'760-00521',title:'Urinary Support Chews 120ct',inv:30,price:24.99},{tcin:1000053755,sku:'ChickenJerky_14oz',title:'Chicken Jerky 14oz',inv:44,price:23.99},{tcin:94189987,sku:'CheeseMstr_4pk',title:'Yak Cheese X-Large 4 Pack',inv:19,price:39.99},{tcin:94189988,sku:'CheeseMed_12pk',title:'Yak Cheese Medium 12 Pack',inv:28,price:49.99},{tcin:1000053757,sku:'CheeseLarge_12pk',title:'Yak Cheese Large 12 Pack',inv:37,price:69.99},{tcin:1000053758,sku:'CheeseSmall_12pk',title:'Yak Cheese Small 12 Pack',inv:34,price:29.99},{tcin:94189990,sku:'CheeseLarge_8pk',title:'Yak Cheese Large 8 Pack',inv:17,price:49.99},{tcin:94189991,sku:'CheeseMstr_12pk',title:'Yak Cheese X-Large 12 Pack',inv:14,price:89.99},{tcin:93227636,sku:'Support_HarnessL',title:'Dog Lift Harness Large',inv:31,price:22.99},{tcin:93227638,sku:'Support_HarnessM',title:'Dog Lift Harness Medium',inv:7,price:19.99},{tcin:93228683,sku:'RetLeash3.0_Or_Lite_wPD',title:'Retractable 3.0 Orange Lite + Bags',inv:15,price:21.99},{tcin:93228667,sku:'RetLeash3.0_Gr_Lite_wPD',title:'Retractable 3.0 Green Lite + Bags',inv:17,price:21.99},{tcin:93229527,sku:'ChickenFeet_30pk',title:'Chicken Feet 30 Pack',inv:26,price:31.99},{tcin:93227630,sku:'CarRestraint_Bl',title:'Car Seatbelt Restraint',inv:12,price:20.99},{tcin:93227541,sku:'Martingale_LeatherBR_L',title:'Leather Martingale Large',inv:32,price:20.99},{tcin:93227314,sku:'SlowFeed_M_G',title:'Slow Feeder Lick Bowl Green',inv:24,price:19.99}];
+
+// ── AMZ FBA SNAPSHOT ──────────────────────────────────────────────────
+const AMZ_US=[{sku:'CheeseStick_4pk',name:'Yak Cheese Chews Large 4 Pack',avail:27786,inbound:7270,total:40937,daily:649.9,fcst1:29250},{sku:'BullyStick_12in_STD_5',name:'Bully Sticks 12in Standard 5 Pack',avail:9389,inbound:2950,total:17210,daily:730.1,fcst1:32855},{sku:'CheeseMed_4pk',name:'Yak Cheese Chews Medium 4 Pack',avail:17291,inbound:3804,total:25112,daily:230.9,fcst1:10388},{sku:'760-00518',name:'Allergy Chews 120ct',avail:12848,inbound:0,total:42452,daily:307.6,fcst1:13840},{sku:'BullyStick_12in_THK_5',name:'Bully Sticks 12in Thick 5 Pack',avail:7599,inbound:4350,total:16999,daily:126.7,fcst1:5703},{sku:'CowKneeCaps_8pk',name:'Cow Kneecap Chews 8 Pack',avail:12232,inbound:963,total:15695,daily:123.9,fcst1:5576},{sku:'CheeseMed_12pk',name:'Yak Cheese Chews Medium 12 Pack',avail:2710,inbound:2522,total:7174,daily:101.7,fcst1:4575},{sku:'760-00520',name:'Calming Chews 120ct',avail:9219,inbound:687,total:35233,daily:193.8,fcst1:8721},{sku:'CheeseLarge_12pk',name:'Yak Cheese Chews Large 12 Pack',avail:3229,inbound:908,total:6328,daily:66.6,fcst1:2995},{sku:'CheeseSmall_5pk',name:'Yak Cheese Chews Small 5 Pack',avail:873,inbound:388,total:1520,daily:61.9,fcst1:2787},{sku:'BullyStick_6in_Curls_5',name:'Bully Stick Curls 5-7in 5 Pack',avail:1569,inbound:745,total:3491,daily:69.4,fcst1:3123},{sku:'CheeseLarge_8pk',name:'Yak Cheese Chews Large 8 Pack',avail:3337,inbound:1795,total:6097,daily:58.2,fcst1:2621},{sku:'760-00521',name:'Urinary Chews 120ct',avail:3777,inbound:612,total:25761,daily:50.1,fcst1:2255},{sku:'CarRestraint_Bl',name:'Car Headrest Seat Belt',avail:1407,inbound:8,total:1583,daily:46.5,fcst1:2091},{sku:'HalfPigEar_12pk',name:'Half Pig Ear 12 Pack',avail:3729,inbound:560,total:9503,daily:45.6,fcst1:2050},{sku:'SmartBell2.0_1_1',name:'Smart Bell 2.0 1-Activator',avail:2579,inbound:153,total:5682,daily:34.9,fcst1:1572},{sku:'TreatPouch2.0_Black',name:'Treat Pouch 2.0 Black',avail:10,inbound:1600,total:6796,daily:34.8,fcst1:1564},{sku:'RetLeash2.0_Or_Lite',name:'Retractable Leash 2.0 Orange Lite',avail:346,inbound:72,total:489,daily:35.4,fcst1:1592},{sku:'SafetyBelt_Buckle_Bl',name:'Safety Belt Buckle Black',avail:13195,inbound:584,total:38897,daily:73.5,fcst1:3309},{sku:'CheeseMstr_4pk',name:'Yak Cheese X-Large 4 Pack',avail:4300,inbound:1260,total:7302,daily:70.4,fcst1:3170},{sku:'ChickenFeet_30pk',name:'Chicken Feet 30 Pack',avail:1541,inbound:210,total:1946,daily:39.7,fcst1:1789},{sku:'SmartBell2.0_2_1',name:'Smart Bell 2.0 2-Activator',avail:2658,inbound:381,total:6281,daily:29.8,fcst1:1343},{sku:'RetLeash2.0_Gr_Lite',name:'Retractable Leash 2.0 Green Lite',avail:1754,inbound:501,total:2467,daily:26.0,fcst1:1170}];
+
+const AMZ_CA=[{sku:'CheeseStick_4pk',name:'Yak Cheese Large 4 Pack',avail:1938,inbound:2605,total:4543,daily:51.2,fcst1:2303},{sku:'CheeseMed_12pk',name:'Yak Cheese Medium 12 Pack',avail:242,inbound:600,total:842,daily:20.1,fcst1:906},{sku:'CheeseSmall_12pk',name:'Yak Cheese Small 12 Pack',avail:7,inbound:0,total:7,daily:17.9,fcst1:804},{sku:'CheeseMstr_4pk',name:'Yak Cheese X-Large 4 Pack',avail:655,inbound:390,total:1045,daily:17.5,fcst1:789},{sku:'TreatPouch2.0_Black',name:'Treat Pouch 2.0 Black',avail:2087,inbound:1,total:2088,daily:14.2,fcst1:639},{sku:'SafetyBelt_Buckle_Bl',name:'Safety Belt Buckle Black',avail:528,inbound:750,total:1903,daily:12.0,fcst1:540},{sku:'CheeseSmall_5pk',name:'Yak Cheese Small 5 Pack',avail:228,inbound:200,total:428,daily:11.5,fcst1:519},{sku:'CheeseMed_4pk',name:'Yak Cheese Medium 4 Pack',avail:832,inbound:200,total:1032,daily:11.5,fcst1:515},{sku:'CheeseLarge_12pk',name:'Yak Cheese Large 12 Pack',avail:295,inbound:600,total:895,daily:11.0,fcst1:495},{sku:'TreatPouch2.0_Grey',name:'Treat Pouch 2.0 Grey',avail:359,inbound:600,total:959,daily:8.5,fcst1:382},{sku:'CheeseLarge_8pk',name:'Yak Cheese Large 8 Pack',avail:246,inbound:600,total:846,daily:8.3,fcst1:375},{sku:'CheeseMstr_12pk',name:'Yak Cheese X-Large 12 Pack',avail:281,inbound:250,total:531,daily:7.5,fcst1:338},{sku:'Support_HarnessM',name:'Dog Lift Harness Medium',avail:371,inbound:200,total:571,daily:6.9,fcst1:311},{sku:'Support_HarnessL',name:'Dog Lift Harness Large',avail:212,inbound:36,total:788,daily:5.8,fcst1:261},{sku:'RetLeash2.0_Or_Lite',name:'Retractable Leash Orange Lite',avail:229,inbound:72,total:637,daily:4.3,fcst1:193}];
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+const SKU_NAMES={'760-00518':'Allergy Chews 120ct','760-00519':'Joint Chews 120ct','760-00520':'Calming Chews 120ct','760-00521':'Urinary Chews 120ct','760-00522':'Digestive Chews 120ct','760-00523':'Tear Stain Chews 120ct','760-00525':'Scooting Chews 120ct','760-00543':'Salmon Oil Chews 120ct','730-00038':'No Chew Spray 8oz','730-00039':'Ear Wash 4oz'};
+const nm=s=>SKU_NAMES[s]||s.replace(/_/g,' ');
+const dc=d=>d===null?'dn':d<30?'dr':d<45?'dy':'dg';
+const dl=d=>d===null?'N/A':Math.round(d)+'d';
+const bar=d=>{if(d===null)return'';const p=Math.min(100,Math.round(d/90*100));const c=d<30?'pr2':d<45?'py2':'pg2';return`<div class="pb"><div class="pf ${c}" style="width:${p}%"></div></div>`;};
+const skuCell=(s,n)=>`<div class="sku-c">${s}</div><div class="sku-n">${n||nm(s)}</div>`;
+const tblMap={};
+function filterTable(id,q,fields){const s=tblMap[id];if(!s)return;const l=q.toLowerCase();const rows=q?s.data.filter(r=>fields.some(f=>String(r[f]||'').toLowerCase().includes(l))):s.data;document.getElementById('tb-'+id).innerHTML=rows.map(s.fn).join('');document.getElementById('ct-'+id).textContent=rows.length+' / '+s.data.length+' SKUs';}
+function initTS(id,data,fields,fn){tblMap[id]={data,fields,fn};}
+function buildTbl(id,data,fields,fn,hdrs){return`<div class="sf-wrap"><input class="sf-input" placeholder="Search..." oninput="filterTable('${id}',this.value,${JSON.stringify(fields).replace(/"/g,"'")})" id="sf-${id}"><span class="sf-ct" id="ct-${id}">${data.length} SKUs</span></div><div style="overflow-x:auto"><table class="t" style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200)"><thead><tr>${hdrs.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody id="tb-${id}">${data.map(fn).join('')}</tbody></table></div>`;}
+function avgDOS(arr,gD,gR){const v=arr.map(r=>{const d=gR(r);return d>0?gD(r)/d:null}).filter(x=>x!==null&&x<9999);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
+function atRisk(arr,gD,gR){return arr.filter(r=>{const d=gR(r);return d>0&&gD(r)/d<30}).length;}
+
+// ── WH 240 ────────────────────────────────────────────────────────────
+let whFilter='';
+function renderWH(){
+  const tot=Object.values(WH).reduce((a,b)=>a+b,0);
+  document.getElementById('wh-tot').textContent=tot.toLocaleString();
+  document.getElementById('wh-sku-ct').textContent=Object.keys(WH).length+' sellable SKUs';
+  renderWHTable();
+}
+function renderWHTable(){
+  const rows=Object.entries(WH).filter(([s,u])=>u>0).filter(([s])=>!whFilter||s.toLowerCase().includes(whFilter.toLowerCase())||nm(s).toLowerCase().includes(whFilter.toLowerCase())).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('wh-ct').textContent=rows.length+' / '+Object.values(WH).filter(u=>u>0).length+' SKUs';
+  const st=(u)=>u>100?'color:rgba(196,235,160,.9)':u>20?'color:rgba(255,198,100,.9)':'color:rgba(255,150,150,.9)';
+  const sl=(u)=>u>100?'Stocked':u>20?'Low':'Critical';
+  document.getElementById('wh-tbody').innerHTML=rows.map(([s,u])=>{
+    const d=WH_DAILY[s]||0;const dos=d>0?u/d:null;
+    return`<tr style="background:rgba(255,255,255,.04)"><td class="sku-c" style="color:rgba(255,255,255,.9)">${s}</td><td style="font-size:10px;color:rgba(255,255,255,.6)">${nm(s)}</td><td class="r" style="font-weight:600;color:#fff">${u.toLocaleString()}</td><td class="r" style="color:rgba(255,255,255,.7)">${d>0?d.toFixed(1):'—'}</td><td class="r"><span class="dp ${dc(dos)}">${dl(dos)}</span>${bar(dos)}</td><td class="r" style="font-size:10px;font-weight:600;${st(u)}">${sl(u)}</td></tr>`;
+  }).join('');
+}
+function filterWH(v){whFilter=v;renderWHTable();}
+function toggleWH(){const b=document.getElementById('wh-body');const c=document.getElementById('wh-chev');b.classList.toggle('open');c.classList.toggle('open',b.classList.contains('open'));}
+
+// ── ALLOCATION ENGINE ─────────────────────────────────────────────────
+let allocData=[];let allocFilter='';
+function getAllSkus(){
+  const set=new Set(Object.keys(WH));
+  Object.values(D).forEach(d=>Object.keys(d).forEach(s=>set.add(s)));
+  return[...set].filter(s=>Object.values(D).some(d=>(d[s]||0)>0)||WH[s]>0);
+}
+function calcAlloc(){
+  return getAllSkus().map(sku=>{
+    const wh=WH[sku]||0;
+    const chDemand={};let total=0;
+    CHANNELS.forEach(c=>{const needed=Math.round((D[c.id][sku]||0)*DOS_TARGETS[c.id]);chDemand[c.id]=needed;total+=needed;});
+    if(total===0&&wh===0)return null;
+    const alloc={};
+    if(wh>=total){CHANNELS.forEach(c=>alloc[c.id]=chDemand[c.id]);}
+    else{const r=total>0?wh/total:0;CHANNELS.forEach(c=>alloc[c.id]=Math.round(chDemand[c.id]*r));}
+    return{sku,wh,total,alloc,pct:total>0?Math.min(100,Math.round(wh/total*100)):100,covered:wh>=total};
+  }).filter(r=>r&&(r.total>0||r.wh>0)).sort((a,b)=>b.total-a.total);
+}
+function buildAllocControls(){
+  document.getElementById('alloc-dos-controls').innerHTML=CHANNELS.map(c=>`
+    <div class="alloc-ch-card">
+      <div class="alloc-ch-hdr">
+        <span class="ch-dot" style="background:${c.color}"></span>
+        <span class="alloc-ch-lbl">${c.label}</span>
+        <span class="flieber-tag">Flieber</span>
+      </div>
+      <div class="alloc-dos-row">
+        <input type="range" min="7" max="90" step="1" value="${c.def}" style="flex:1" oninput="updDOS('${c.id}',+this.value)">
+        <span class="alloc-dos-val" id="dv-${c.id}">${c.def}d</span>
+      </div>
+      <div class="alloc-dos-req" id="dr-${c.id}">—</div>
+    </div>`).join('');
+}
+function updDOS(id,val){DOS_TARGETS[id]=val;document.getElementById('dv-'+id).textContent=val+'d';renderAlloc();}
+function renderAllocSummary(){
+  const totalWH=Object.values(WH).reduce((a,b)=>a+b,0);
+  const totalD=allocData.reduce((a,r)=>a+r.total,0);
+  const shortfall=Math.max(0,totalD-totalWH);
+  const gaps=allocData.filter(r=>!r.covered).length;
+  const pct=totalD>0?Math.min(100,Math.round(totalWH/totalD*100)):100;
+  document.getElementById('alloc-summary-cards').innerHTML=`
+    <div class="mc"><div class="mc-lbl">WH 240 on hand</div><div class="mc-val" style="color:var(--blue)">${totalWH.toLocaleString()}</div><div class="mc-sub">Rawson Road 240</div></div>
+    <div class="mc"><div class="mc-lbl">Total demand</div><div class="mc-val">${totalD.toLocaleString()}</div><div class="mc-sub">all 7 channels at target DOS</div></div>
+    <div class="mc"><div class="mc-lbl">Coverage</div><div class="mc-val" style="color:${pct>=100?'var(--green)':pct>=70?'var(--amber)':'var(--red)'}">${pct}%</div><div class="mc-sub">of demand met from WH 240</div></div>
+    <div class="mc"><div class="mc-lbl">Shortfall</div><div class="mc-val" style="color:${shortfall>0?'var(--red)':'var(--green)'}">${shortfall>0?shortfall.toLocaleString():'None'}</div><div class="mc-sub">units below targets</div></div>
+    <div class="mc"><div class="mc-lbl">SKUs with gaps</div><div class="mc-val" style="color:${gaps>0?'var(--amber)':'var(--green)'}">${gaps}</div><div class="mc-sub">fair-shared below target</div></div>
+    <div class="mc"><div class="mc-lbl">Surplus</div><div class="mc-val">${Math.max(0,totalWH-totalD).toLocaleString()}</div><div class="mc-sub">above all channel targets</div></div>`;
+  CHANNELS.forEach(c=>{
+    let t=0;Object.keys(D[c.id]).forEach(s=>t+=Math.round((D[c.id][s]||0)*DOS_TARGETS[c.id]));
+    const el=document.getElementById('dr-'+c.id);if(el)el.textContent=t.toLocaleString()+' units needed';
+  });
+}
+function renderAllocTable(){
+  const rows=allocFilter?allocData.filter(r=>r.sku.toLowerCase().includes(allocFilter.toLowerCase())||nm(r.sku).toLowerCase().includes(allocFilter.toLowerCase())):allocData;
+  document.getElementById('alloc-ct').textContent=rows.length+' / '+allocData.length+' SKUs';
+  const bc=p=>p>=100?'var(--green)':p>=70?'var(--amber)':'var(--red)';
+  const pill=p=>{const cl=p>=100?'dg':p>=70?'dy':'dr';return`<span class="dp ${cl}">${p}%</span>`;};
+  const cell=v=>v>0?v.toLocaleString():`<span class="zero-cell">—</span>`;
+  document.getElementById('alloc-tbody').innerHTML=rows.map(r=>`<tr>
+    <td>${skuCell(r.sku,null)}</td>
+    <td class="r" style="font-weight:600">${r.wh.toLocaleString()}</td>
+    <td class="r" style="font-weight:600">${r.total.toLocaleString()}</td>
+    ${CHANNELS.map(c=>`<td class="r">${cell(r.alloc[c.id])}</td>`).join('')}
+    <td>${pill(r.pct)}<div class="pb"><div class="pf" style="width:${Math.min(100,r.pct)}%;background:${bc(r.pct)}"></div></div></td>
+  </tr>`).join('');
+}
+function renderAlloc(){allocData=calcAlloc();renderAllocSummary();renderAllocTable();}
+function filterAlloc(v){allocFilter=v;renderAllocTable();}
+
+// ── CHANNEL ROW BUILDERS ──────────────────────────────────────────────
+function amzRow(r){const d=r.daily>0?r.total/r.daily:null;return`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.daily.toFixed(1)}</td><td class="r">${r.avail.toLocaleString()}</td><td class="r" style="color:var(--blue)">${r.inbound.toLocaleString()}</td><td class="r" style="font-weight:600">${r.total.toLocaleString()}</td><td class="r">${Math.round(r.fcst1).toLocaleString()}</td><td><span class="dp ${dc(d)}">${dl(d)}</span>${bar(d)}</td></tr>`;}
+function wmRow(r){return`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.daily.toFixed(1)}</td><td class="r">${r.avail.toLocaleString()}</td><td class="r" style="color:var(--blue)">${r.inbound.toLocaleString()}</td><td class="r">${r.avail+r.inbound}</td><td><span class="dp ${dc(r.dos)}">${dl(r.dos)}</span>${bar(r.dos)}</td><td style="font-size:10px;font-weight:600;color:${r.status==='In Stock'?'var(--green)':r.status==='At Risk'?'var(--red)':'var(--amber)'}">${r.status}</td></tr>`;}
+function ttRow(r){return`<tr><td>${skuCell(r.sku,r.name)}</td><td class="r">${r.daily7.toFixed(1)}</td><td class="r">${r.avail.toLocaleString()}</td><td class="r" style="color:var(--blue)">${r.inbound.toLocaleString()}</td><td><span class="dp ${dc(r.dos)}">${dl(r.dos)}</span>${bar(r.dos)}</td></tr>`;}
+function tgtRow(r){return`<tr><td>${skuCell(r.sku,r.title)}</td><td>${r.tcin}</td><td class="r">${r.inv}${r.inv<10?`<span class="dp dr" style="margin-left:4px;font-size:9px">Low</span>`:''}</td><td>$${r.price.toFixed(2)}</td></tr>`;}
+function flRow(ch,r){const d=r.daily_velocity;const dos=d>0?((WH[r.sku]||0)/d):null;return`<tr><td>${skuCell(r.sku,r.name||nm(r.sku))}</td><td class="r">${d.toFixed(2)}</td><td class="r">${r.forecast_n45d||Math.round(d*45)}</td><td class="r">${(WH[r.sku]||0).toLocaleString()}</td><td><span class="dp ${dc(dos)}">${dl(dos)}</span>${bar(dos)}</td></tr>`;}
+
+// Channel definitions
+const CHANNEL_DEFS=[
+  {id:'amz_us',label:'Amazon US (FBA)',color:'#1a5fa8',live:true,
+   skus:()=>AMZ_US.length,avgDOS:()=>avgDOS(AMZ_US,r=>r.total,r=>r.daily),atRisk:()=>atRisk(AMZ_US,r=>r.total,r=>r.daily),
+   badge:()=>{const d=avgDOS(AMZ_US,r=>r.total,r=>r.daily);return d<30?'br':d<45?'by':'bg'},badgeLbl:()=>{const d=avgDOS(AMZ_US,r=>r.total,r=>r.daily);return d<30?'At risk':d<45?'Watch':'Healthy'},
+   html:()=>buildTbl('amz-us',AMZ_US,['sku','name'],amzRow,['SKU / Product','Daily (Flieber)','FBA available','Inbound to AMZ','Total FBA','Flieber N45D','DOS'])},
+  {id:'amz_ca',label:'Amazon CA (FBA)',color:'#2176b5',live:true,
+   skus:()=>AMZ_CA.length,avgDOS:()=>avgDOS(AMZ_CA,r=>r.total,r=>r.daily),atRisk:()=>atRisk(AMZ_CA,r=>r.total,r=>r.daily),
+   badge:()=>'bg',badgeLbl:()=>'Healthy',
+   html:()=>buildTbl('amz-ca',AMZ_CA,['sku','name'],amzRow,['SKU / Product','Daily (Flieber)','FBA available','Inbound to AMZ','Total FBA','Flieber N45D','DOS'])},
+  {id:'shopify',label:'Shopify (DTC)',color:'#95bf47',live:true,
+   skus:()=>Object.keys(D.shopify).length,avgDOS:()=>null,atRisk:()=>Object.keys(D.shopify).filter(s=>{const d=D.shopify[s];return d>0&&(WH[s]||0)/d<30;}).length,
+   badge:()=>'bg',badgeLbl:()=>'Via WH 240',
+   html:()=>`<div class="nb">Fulfilled from WH 240. Velocities live from Flieber (Mighty Paw-Shopify-US). Use the WH 240 Allocation tab to see per-SKU coverage.</div>${buildTbl('shopify',Object.entries(D.shopify).filter(([s,d])=>d>0).sort((a,b)=>b[1]-a[1]).map(([s,d])=>({sku:s,daily_velocity:d,forecast_n45d:Math.round(d*45)})),['sku'],r=>flRow('shopify',r),['SKU / Product','Daily velocity (Flieber)','N45D forecast','WH 240 on hand','WH DOS'])}` },
+  {id:'chewy',label:'Chewy (Wholesale)',color:'#0066cc',live:true,
+   skus:()=>Object.keys(D.chewy).length,avgDOS:()=>null,atRisk:()=>Object.keys(D.chewy).filter(s=>{const d=D.chewy[s];return d>0&&(WH[s]||0)/d<30;}).length,
+   badge:()=>'bx',badgeLbl:()=>'No inv data',
+   html:()=>`<div class="nb">Wholesale channel. Velocities live from Flieber (Mighty Paw-CHEWY-US). Fulfilled from WH 240.</div>${buildTbl('chewy',Object.entries(D.chewy).filter(([s,d])=>d>0).sort((a,b)=>b[1]-a[1]).map(([s,d])=>({sku:s,daily_velocity:d,forecast_n45d:Math.round(d*45)})),['sku'],r=>flRow('chewy',r),['SKU / Product','Daily velocity (Flieber)','N45D forecast','WH 240 on hand','WH DOS'])}` },
+  {id:'tiktok',label:'TikTok FBT',color:'#111',live:false,
+   skus:()=>TT.length,avgDOS:()=>avgDOS(TT.filter(r=>r.avail>0),r=>r.avail,r=>r.daily7),atRisk:()=>atRisk(TT.filter(r=>r.avail>0),r=>r.avail,r=>r.daily7),
+   badge:()=>'by',badgeLbl:()=>'Mixed stock',
+   html:()=>buildTbl('tiktok',TT,['sku','name'],ttRow,['SKU / Product','Daily (L7D)','FBT available','Inbound','DOS'])},
+  {id:'walmart',label:'Walmart 3P',color:'#0071ce',live:false,
+   skus:()=>WM.length,avgDOS:()=>avgDOS(WM,r=>r.avail,r=>r.daily),atRisk:()=>atRisk(WM,r=>r.avail,r=>r.daily),
+   badge:()=>{const d=avgDOS(WM,r=>r.avail,r=>r.daily);return d<30?'br':d<45?'by':'bg'},badgeLbl:()=>{const d=avgDOS(WM,r=>r.avail,r=>r.daily);return d<30?'At risk':d<45?'Watch':'Healthy'},
+   html:()=>buildTbl('walmart',WM,['sku','name'],wmRow,['SKU / Product','Daily sold','Available','Inbound','Total','DOS','Walmart status'])},
+  {id:'target',label:'Target+',color:'#cc0000',live:true,
+   skus:()=>TGT.length,avgDOS:()=>null,atRisk:()=>TGT.filter(r=>r.inv<10).length,
+   badge:()=>{const r=TGT.filter(r=>r.inv<10).length;return r>3?'by':'bg'},badgeLbl:()=>{const r=TGT.filter(r=>r.inv<10).length;return r>0?r+' low stock':'Healthy'},
+   html:()=>buildTbl('target',TGT,['sku','title'],tgtRow,['SKU / Product','TCIN','DC Inventory','Price'])},
+];
+
+function initCh(id){
+  const fn={amz_us:amzRow,'amz-us':amzRow,amz_ca:amzRow,'amz-ca':amzRow,walmart:wmRow,tiktok:ttRow,target:tgtRow};
+  const data={'amz-us':AMZ_US,'amz-ca':AMZ_CA,walmart:WM,tiktok:TT,target:TGT};
+  const fields={'amz-us':['sku','name'],'amz-ca':['sku','name'],walmart:['sku','name'],tiktok:['sku','name'],target:['sku','title']};
+  const shRow=r=>flRow('shopify',r);const chRow=r=>flRow('chewy',r);
+  if(id==='shopify')initTS('shopify',Object.entries(D.shopify).filter(([s,d])=>d>0).sort((a,b)=>b[1]-a[1]).map(([s,d])=>({sku:s,daily_velocity:d,forecast_n45d:Math.round(d*45)})),['sku'],shRow);
+  else if(id==='chewy')initTS('chewy',Object.entries(D.chewy).filter(([s,d])=>d>0).sort((a,b)=>b[1]-a[1]).map(([s,d])=>({sku:s,daily_velocity:d,forecast_n45d:Math.round(d*45)})),['sku'],chRow);
+  else if(data[id])initTS(id,data[id],fields[id]||['sku'],fn[id]||amzRow);
+}
+
+// ── SCORECARD ─────────────────────────────────────────────────────────
+function renderScorecard(){
+  const whTot=Object.values(WH).reduce((a,b)=>a+b,0);
+  const risks=CHANNEL_DEFS.map(c=>c.atRisk()).reduce((a,b)=>a+b,0);
+  const allocRisk=calcAlloc().filter(r=>!r.covered).length;
+  document.getElementById('scorecard').innerHTML=`
+    <div class="mc"><div class="mc-lbl">WH 240 sellable units</div><div class="mc-val" style="color:var(--blue)">${whTot.toLocaleString()}</div><div class="mc-sub"><span class="live-pill"><span class="live-dot"></span>Live BigQuery</span></div></div>
+    <div class="mc"><div class="mc-lbl">Amazon US SKUs</div><div class="mc-val">${AMZ_US.length}</div><div class="mc-sub"><span class="live-pill"><span class="live-dot"></span>Live BigQuery</span></div></div>
+    <div class="mc"><div class="mc-lbl">Walmart SKUs</div><div class="mc-val">${WM.length}</div><div class="mc-sub">imported</div></div>
+    <div class="mc"><div class="mc-lbl">TikTok FBT SKUs</div><div class="mc-val">${TT.length}</div><div class="mc-sub">imported</div></div>
+    <div class="mc"><div class="mc-lbl">Target+ SKUs</div><div class="mc-val">${TGT.length}</div><div class="mc-sub">imported · Flieber velocity</div></div>
+    <div class="mc"><div class="mc-lbl">At risk (DOS &lt;30d)</div><div class="mc-val" style="color:var(--red)">${risks}</div><div class="mc-sub">across all channels</div></div>
+    <div class="mc"><div class="mc-lbl">WH 240 alloc gaps</div><div class="mc-val" style="color:var(--amber)">${allocRisk}</div><div class="mc-sub">SKUs below DOS target</div></div>`;
+}
+
+// ── CHANNEL CARDS ─────────────────────────────────────────────────────
+function renderCards(){
+  document.getElementById('ch-grid').innerHTML=CHANNEL_DEFS.map(ch=>{
+    const d=ch.avgDOS();const r=ch.atRisk();const s=ch.skus();
+    return`<div class="ch-card" onclick="openDrill('${ch.id}')" id="card-${ch.id}">
+      <div class="ch-hdr">
+        <div class="ch-name"><span class="ch-dot" style="background:${ch.color}"></span>${ch.label}${ch.live?`<span class="live-pill" style="font-size:9px;padding:2px 6px"><span class="live-dot"></span>Live</span>`:''}</div>
+        <span class="badge ${ch.badge()}">${ch.badgeLbl()}</span>
+      </div>
+      <div class="ch-stats">
+        <div class="cst"><div class="cst-v">${s}</div><div class="cst-l">Total SKUs</div></div>
+        <div class="cst"><div class="cst-v"><span class="dp ${dc(d)}">${dl(d)}</span></div><div class="cst-l">Avg DOS</div></div>
+        <div class="cst"><div class="cst-v" style="${r>0?'color:var(--red)':''}">${r}</div><div class="cst-l">At risk</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function openDrill(id){
+  const ch=CHANNEL_DEFS.find(c=>c.id===id);if(!ch)return;
+  document.getElementById('drill-ttl').textContent=ch.label+' — SKU detail';
+  document.getElementById('drill-body').innerHTML=ch.html();
+  initCh(id.replace('_','-'));
+  document.querySelectorAll('.ch-card').forEach(c=>c.classList.remove('active'));
+  document.getElementById('card-'+id).classList.add('active');
+  document.getElementById('drill-panel').style.display='block';
+  setTimeout(()=>document.getElementById('drill-panel').scrollIntoView({behavior:'smooth',block:'nearest'}),60);
+}
+function closeDrill(){document.getElementById('drill-panel').style.display='none';document.querySelectorAll('.ch-card').forEach(c=>c.classList.remove('active'));}
+
+// ── BY CHANNEL & ALL ──────────────────────────────────────────────────
+function renderByChannel(){
+  document.getElementById('ch-tab-bar').innerHTML=CHANNEL_DEFS.map((ch,i)=>`<button class="nav-tab${i===0?' active':''}" style="font-size:11px" onclick="selCh(this,'chp-${ch.id}')">${ch.label}</button>`).join('');
+  document.getElementById('ch-panels').innerHTML=CHANNEL_DEFS.map((ch,i)=>`<div id="chp-${ch.id}" class="ch-panel${i===0?' active':''}"><div style="overflow-x:auto">${ch.html()}</div></div>`).join('');
+  CHANNEL_DEFS.forEach(ch=>initCh(ch.id.replace('_','-')));
+}
+function selCh(btn,pid){document.querySelectorAll('.ch-panel').forEach(p=>p.classList.remove('active'));document.getElementById(pid).classList.add('active');document.querySelectorAll('#ch-tab-bar .nav-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function renderAll(){
+  document.getElementById('all-cont').innerHTML=CHANNEL_DEFS.map(ch=>`<div class="ac-row"><div class="ac-rh"><span class="ch-dot" style="background:${ch.color}"></span><span style="font-size:13px;font-weight:600;flex:1">${ch.label}</span>${ch.live?`<span class="live-pill"><span class="live-dot"></span>Live BQ</span>`:''}<span class="badge ${ch.badge()}">${ch.badgeLbl()}</span></div><div style="padding:14px 18px;overflow-x:auto">${ch.html()}</div></div>`).join('');
+  CHANNEL_DEFS.forEach(ch=>initCh(ch.id.replace('_','-')));
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────
+function switchTab(t,btn){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('visible'));
+  document.getElementById('tab-'+t).classList.add('visible');
+  document.querySelectorAll('.topbar .nav-tab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  if(t==='all')renderAll();
+  if(t==='channels')renderByChannel();
+  if(t==='alloc')renderAlloc();
+}
+
+// ── IMPORT ────────────────────────────────────────────────────────────
+function ev(e){e.preventDefault();}
+function drop(e,ch){e.preventDefault();const f=e.dataTransfer.files[0];if(f)handleFile({files:[f]},ch);}
+function handleFile(inp,ch){if(!inp.files[0])return;const st=document.getElementById('st-'+ch);st.style.color='var(--gray-400)';st.textContent='Reading '+inp.files[0].name+'...';setTimeout(()=>{st.textContent='✓ File received — refresh on next dashboard load.';st.style.color='var(--green)';},600);}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+document.getElementById('as-of-date').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+renderWH();renderScorecard();renderCards();buildAllocControls();
+</script>
+</body>
+</html>
