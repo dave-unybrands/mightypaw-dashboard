@@ -712,12 +712,18 @@ function updateTGTPool(){
     MKT_POOL['target:'+r.sku]=total;
   });
 }
-// TikTok has no BigQuery inventory — pool stays zero (WH 240 covers all)
-// Call on init to seed from hardcoded uploaded data
+function updateTTPool(){
+  // TikTok FBT inventory from uploaded TT array (avail + inbound)
+  TT.forEach(r=>{
+    const total=(r.avail||0)+(r.inbound||0);
+    MKT_POOL['tiktok:'+r.sku]=total;
+  });
+}
+// Call on init to seed pools from hardcoded uploaded data
 function initMarketplacePools(){
   updateWMPool();
   updateTGTPool();
-  // Move walmart and target out of WH_ONLY logic — handled by pool now
+  updateTTPool();
 }
 
 function getAllSkus(){
@@ -737,8 +743,8 @@ function calcAlloc(){
   //
   // Shopify/Chewy/Walmart/Target+ have no separate pool → wh240_needed = dos_demand
 
-  const WH_ONLY=['shopify','chewy','tiktok']; // WH 240 covers full demand (no separate pool)
-  const POOL_CHANNELS=['amz_us','amz_ca','walmart','target']; // have own inventory pool
+  const WH_ONLY=['shopify','chewy']; // WH 240 covers full demand — no separate marketplace pool
+  const POOL_CHANNELS=['amz_us','amz_ca','walmart','tiktok','target']; // have own inventory pool
 
   return getAllSkus().map(sku=>{
     const wh=WH[sku]||0;
@@ -1260,7 +1266,7 @@ function switchTab(t,btn){
 // ── IMPORT ────────────────────────────────────────────────────────────
 function ev(e){e.preventDefault();}
 function drop(e,ch){e.preventDefault();const f=e.dataTransfer.files[0];if(f)handleFile({files:[f]},ch);}
-function handleFile(inp,ch){if(!inp.files[0])return;const st=document.getElementById('st-'+ch);st.style.color='var(--gray-400)';st.textContent='Reading '+inp.files[0].name+'...';setTimeout(()=>{st.textContent='✓ File received — allocation pools updated.';st.style.color='var(--green)';if(ch==='wm'){updateWMPool();renderAlloc();}if(ch==='tgt'){updateTGTPool();renderAlloc();}},600);}
+function handleFile(inp,ch){if(!inp.files[0])return;const st=document.getElementById('st-'+ch);st.style.color='var(--gray-400)';st.textContent='Reading '+inp.files[0].name+'...';setTimeout(()=>{st.textContent='✓ File received — allocation pools updated.';st.style.color='var(--green)';if(ch==='wm'){updateWMPool();renderAlloc();}if(ch==='tt'){updateTTPool();renderAlloc();}if(ch==='tgt'){updateTGTPool();renderAlloc();}},600);}
 
 // ── INIT ──────────────────────────────────────────────────────────────
 document.getElementById('as-of-date').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
