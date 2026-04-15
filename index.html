@@ -360,7 +360,7 @@ const nm=s=>SKU_NAMES[s]||s.replace(/_/g,' ');
 const dc=d=>d===null?'dn':d<30?'dr':d<45?'dy':'dg';
 const dl=d=>d===null?'N/A':Math.round(d)+'d';
 const bar=d=>{if(d===null)return'';const p=Math.min(100,Math.round(d/90*100));const c=d<30?'pr2':d<45?'py2':'pg2';return`<div class="pb"><div class="pf ${c}" style="width:${p}%"></div></div>`;};
-const skuCell=(s,n)=>{const asin=ASIN_MAP[s]||'';return`<div class="sku-c">${s}${asin?`<span style="font-size:9px;color:var(--gray-400);margin-left:6px;font-weight:400">${asin}</span>`:''}</div><div class="sku-n">${n||nm(s)}</div>`;};
+const skuCell=(s,n)=>{const asin=ASIN_MAP[s]||'';const asinHtml=asin?'<span style="font-size:9px;color:var(--gray-400);margin-left:6px;font-weight:400">'+asin+'</span>':'';return'<div class="sku-c">'+s+asinHtml+'</div><div class="sku-n">'+(n||nm(s))+'</div>';};
 const tblMap={};
 function filterTable(id,q,fields){const s=tblMap[id];if(!s)return;const l=q.toLowerCase();const rows=q?s.data.filter(r=>fields.some(f=>String(r[f]||'').toLowerCase().includes(l))):s.data;document.getElementById('tb-'+id).innerHTML=rows.map(s.fn).join('');document.getElementById('ct-'+id).textContent=rows.length+' / '+s.data.length+' SKUs';}
 function initTS(id,data,fields,fn){tblMap[id]={data,fields,fn};}
@@ -375,7 +375,7 @@ function buildTbl(id,data,fields,fn,hdrs){
     if(i===n-1)return`<col style="width:${dosPct}%">`;
     return`<col style="width:${midPct}%">`;
   }).join('');
-  return`<div class="sf-wrap"><input class="sf-input" placeholder="Search..." oninput="filterTable('${id}',this.value,${JSON.stringify(fields).replace(/"/g,"'")})" id="sf-${id}"><span class="sf-ct" id="ct-${id}">${data.length} SKUs</span></div><div style="overflow-x:auto;min-width:0"><table class="t" style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);min-width:560px"><colgroup>${cols}</colgroup><thead><tr>${hdrs.map((h,i)=>`<th style="text-align:${i===0?'left':'right'}">${h}</th>`).join('')}</tr></thead><tbody id="tb-${id}">${data.map(fn).join('')}</tbody></table></div>`;
+  return`<div class="sf-wrap"><input class="sf-input" placeholder="Search..." oninput="filterTable('${id}',this.value,${JSON.stringify(fields).replace(/"/g,"'")})" id="sf-${id}"><span class="sf-ct" id="ct-${id}">${data.length} SKUs</span></div><div style="overflow-x:auto;min-width:0"><table class="t" style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);min-width:560px"><colgroup>${cols}</colgroup><thead><tr>${hdrs.map((h,i)=>'<th style="text-align:'+(i===0?'left':'right')+'">'+h+'</th>').join('')}</tr></thead><tbody id="tb-${id}">${data.map(fn).join('')}</tbody></table></div>`;
 }
 function avgDOS(arr,gD,gR){const v=arr.map(r=>{const d=gR(r);return d>0?gD(r)/d:null}).filter(x=>x!==null&&x<9999);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
 function atRisk(arr,gD,gR){return arr.filter(r=>{const d=gR(r);return d>0&&gD(r)/d<30}).length;}
@@ -588,6 +588,7 @@ function renderAllocTable(){
 
   const html=rows.map(r=>{
     const surplus=r.whSurplus||0;
+      const short=Math.max(0,need-wh);
     const surpColor=surplus>0?'var(--green)':'var(--gray-400)';
     const surpBg=surplus>0?'rgba(99,153,34,.08)':'var(--gray-50)';
     const surpBorder=surplus>0?'var(--green-mid)':'var(--gray-200)';
@@ -654,15 +655,7 @@ function filterAlloc(v){allocFilter=v;renderAllocTable();}
 // ── CHANNEL ROW BUILDERS ──────────────────────────────────────────────
 function amzRow(r){
   const d=r.daily>0?r.total/r.daily:null;
-  return`<tr>
-    <td>${skuCell(r.sku,r.name)}</td>
-    <td style="text-align:right">${r.daily.toFixed(1)}</td>
-    <td style="text-align:right">${r.avail.toLocaleString()}</td>
-    <td style="text-align:right;color:var(--blue)">${r.inbound.toLocaleString()}</td>
-    <td style="text-align:right;font-weight:600">${r.total.toLocaleString()}</td>
-    <td style="text-align:right">${Math.round(r.fcst1).toLocaleString()}</td>
-    <td style="text-align:right"><span class="dp ${dc(d)}">${dl(d)}</span>${bar(d)}</td>
-  </tr>`;}
+  return'<tr style="background:rgba(255,255,255,.04)"><td class="sku-c" style="color:rgba(255,255,255,.9)">'+r.sku+(ASIN_MAP[r.sku]?' <span style="font-size:9px;color:rgba(255,255,255,.35)">'+ASIN_MAP[r.sku]+'</span>':'')+'</td><td class="r" style="font-weight:600;color:#fff">'+wh.toLocaleString()+'</td><td class="r">'+need.toLocaleString()+'</td><td class="r" style="font-weight:600;color:'+(short>0?'rgba(255,150,150,.9)':'rgba(160,230,120,.9)')+'">'+( short>0?'-'+short.toLocaleString():'✓')+'</td>';}
 function wmRow(r){
   const total=(r.avail||0)+(r.inbound||0);
   const dos=r.daily>0?total/r.daily:null;
@@ -1007,7 +1000,10 @@ function renderAlertTab(){
     const rows=ch.rows();
     const oos=rows.filter(r=>r.status==='OOS'||r.status==='Critical <7d').length;
     const risk=rows.filter(r=>r.status==='At Risk <30d').length;
-    const badges=`${oos>0?`<span class="alert-badge oos-badge">${oos} OOS/Critical</span>`:''}${risk>0?`<span class="alert-badge risk-badge" style="margin-left:4px">${risk} At Risk</span>`:''}${oos===0&&risk===0?`<span class="alert-badge ok-badge">All Clear</span>`:''}`;
+    const oosHtml=oos>0?'<span class="alert-badge oos-badge">'+oos+' OOS/Critical</span>':'';
+    const riskHtml=risk>0?'<span class="alert-badge risk-badge" style="margin-left:4px">'+risk+' At Risk</span>':'';
+    const okHtml=oos===0&&risk===0?'<span class="alert-badge ok-badge">All Clear</span>':'';
+    const badges=oosHtml+riskHtml+okHtml;
     html+=`<div class="alert-ch-block">
       <div class="alert-ch-hdr">
         <span class="ch-dot" style="background:${ch.color}"></span>
@@ -1020,7 +1016,7 @@ function renderAlertTab(){
       const n=ch.hdrs.length;
       const skuPct=35;const dosPct=18;const midPct=n>2?Math.floor((100-skuPct-dosPct)/(n-2)):0;
       const cols=ch.hdrs.map((_,i)=>i===0?`<col style="width:${skuPct}%">`:i===n-1?`<col style="width:${dosPct}%">`:`<col style="width:${midPct}%">`).join('');
-      html+=`<div style="overflow-x:auto;min-width:0"><table class="t" style="background:var(--white);min-width:500px"><colgroup>${cols}</colgroup><thead><tr>${ch.hdrs.map((h,i)=>`<th style="text-align:${i===0?'left':'right'}">${h}</th>`).join('')}</tr></thead><tbody>${rows.map(ch.rowFn).join('')}</tbody></table></div>`;
+      html+=`<div style="overflow-x:auto;min-width:0"><table class="t" style="background:var(--white);min-width:500px"><colgroup>${cols}</colgroup><thead><tr>${ch.hdrs.map((h,i)=>'<th style="text-align:'+(i===0?'left':'right')+'">'+h+'</th>').join('')}</tr></thead><tbody>${rows.map(ch.rowFn).join('')}</tbody></table></div>`;
     }
     html+=`</div>`;
   });
@@ -1041,13 +1037,13 @@ function renderCards(){
     const d=ch.avgDOS();const r=ch.atRisk();const s=ch.skus();const o=ch.oosCount();
     return`<div class="ch-card" onclick="openDrill('${ch.id}')" id="card-${ch.id}">
       <div class="ch-hdr">
-        <div class="ch-name"><span class="ch-dot" style="background:${ch.color}"></span>${ch.label}${ch.live?`<span class="live-pill" style="font-size:9px;padding:2px 6px"><span class="live-dot"></span>Live</span>`:''}</div>
+        <div class="ch-name"><span class="ch-dot" style="background:${ch.color}"></span>${ch.label}${ch.live?'<span class="live-pill" style="font-size:9px;padding:2px 6px"><span class="live-dot"></span>Live</span>':''}</div>
         <span class="badge ${ch.badge()}">${ch.badgeLbl()}</span>
       </div>
       <div class="ch-stats">
         <div class="cst"><div class="cst-v">${s}</div><div class="cst-l">Total SKUs</div></div>
-        <div class="cst ${o>0?'cst-oos':''}" onclick="${o>0?`event.stopPropagation();openDrill('${ch.id}','oos')`:''}" style="${o>0?'cursor:pointer':''}"><div class="cst-v" style="${o>0?'color:var(--red)':''}">${o}</div><div class="cst-l">OOS</div></div>
-        <div class="cst" onclick="${r>0?`event.stopPropagation();openDrill('${ch.id}','risk')`:''}" style="${r>0?'cursor:pointer':''}"><div class="cst-v" style="${r>0?'color:var(--red)':''}">${r}</div><div class="cst-l">At risk</div></div>
+        <div class="cst ${o>0?'cst-oos':''}" onclick="${o>0?'event.stopPropagation();openDrill(\''+ch.id+'\',\'oos\')':''}" style="${o>0?'cursor:pointer':''}"><div class="cst-v" style="${o>0?'color:var(--red)':''}">${o}</div><div class="cst-l">OOS</div></div>
+        <div class="cst" onclick="${r>0?'event.stopPropagation();openDrill(\''+ch.id+'\',\'risk\')':''}" style="${r>0?'cursor:pointer':''}"><div class="cst-v" style="${r>0?'color:var(--red)':''}">${r}</div><div class="cst-l">At risk</div></div>
       </div>
     </div>`;
   }).join('');
@@ -1057,11 +1053,14 @@ function openDrill(id,filter){
   document.getElementById('drill-ttl').textContent=ch.label+' — SKU detail';
   // Build filter buttons
   const oos=ch.oosCount();const risk=ch.atRisk();
-  const filterBar=`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-    <button onclick="openDrill('${id}')" class="drill-filter-btn ${!filter?'active':''}">All SKUs</button>
-    <button onclick="openDrill('${id}','oos')" class="drill-filter-btn ${filter==='oos'?'active':''}" style="color:var(--red)">⚠ OOS/Critical (${oos})</button>
-    <button onclick="openDrill('${id}','risk')" class="drill-filter-btn ${filter==='risk'?'active':''}" style="color:var(--amber)">At Risk <30d (${risk})</button>
-  </div>`;
+  const allActive=!filter?'active':'';
+  const oosActive=filter==='oos'?'active':'';
+  const riskActive=filter==='risk'?'active':'';
+  const filterBar='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+
+    '<button onclick="openDrill(\''+id+'\')" class="drill-filter-btn '+allActive+'">All SKUs</button>'+
+    '<button onclick="openDrill(\''+id+'\',\'oos\')" class="drill-filter-btn '+oosActive+'" style="color:var(--red)">⚠ OOS/Critical ('+oos+')</button>'+
+    '<button onclick="openDrill(\''+id+'\',\'risk\')" class="drill-filter-btn '+riskActive+'" style="color:var(--amber)">At Risk &lt;30d ('+risk+')</button>'+
+    '</div>';
   document.getElementById('drill-body').innerHTML=filterBar+ch.html(filter);
   initCh(id.replace('_','-'),filter);
   document.querySelectorAll('.ch-card').forEach(c=>c.classList.remove('active'));
