@@ -257,7 +257,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
         <input type="file" class="file-input" id="f-wm" accept=".csv,.xlsx,.xls" onchange="handleFile(this,'wm')">
       </div>
       <div class="imp-st" id="st-wm" style="color:var(--green)">✓ 150 SKUs loaded from Walmart_INV.xlsx</div>
-      <div class="imp-hint">Cols: SKU, Item name, Available units, Inbound units, Daily units sold, Days of supply</div>
+      <div class="imp-hint">Any CSV or Excel — needs a SKU column and an available qty column. Column names are auto-detected.</div>
     </div>
     <div class="imp-panel">
       <div class="imp-ttl">TikTok FBT inventory</div>
@@ -268,7 +268,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
         <input type="file" class="file-input" id="f-tt" accept=".csv,.xlsx,.xls" onchange="handleFile(this,'tt')">
       </div>
       <div class="imp-st" id="st-tt" style="color:var(--green)">✓ 28 SKUs loaded from TikTok_INV.xlsx</div>
-      <div class="imp-hint">Cols: Goods Reference Code, Available Inventory, In-Transit Total, Avg Daily Sales L7D</div>
+      <div class="imp-hint">Any CSV or Excel — needs a SKU/reference column and available qty. Column names are auto-detected.</div>
     </div>
     <div class="imp-panel">
       <div class="imp-ttl">Target+ inventory</div>
@@ -279,7 +279,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
         <input type="file" class="file-input" id="f-tgt" accept=".csv,.xlsx,.xls" onchange="handleFile(this,'tgt')">
       </div>
       <div class="imp-st" id="st-tgt" style="color:var(--green)">✓ 55 SKUs loaded from Target_INV.csv</div>
-      <div class="imp-hint">Cols: TCIN, Partner SKU, Product Title, Relationship, Distribution Center 1 Inventory, Price</div>
+      <div class="imp-hint">Any CSV or Excel — needs a SKU/TCIN column and available qty. Column names are auto-detected.</div>
     </div>
     <div class="imp-panel">
       <div class="imp-ttl">All channel velocities</div>
@@ -297,6 +297,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
 </div>
 <div class="footer">Mighty Paw Omni-Channel Dashboard · Built with Claude · Data: BigQuery bq-uny-data · Velocities: Flieber · Last updated Apr 15, 2026</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── CHANNEL CONFIG ─────────────────────────────────────────────────────
 const CHANNELS=[
@@ -1205,7 +1206,136 @@ function switchTab(t,btn){
 // ── IMPORT ────────────────────────────────────────────────────────────
 function ev(e){e.preventDefault();}
 function drop(e,ch){e.preventDefault();const f=e.dataTransfer.files[0];if(f)handleFile({files:[f]},ch);}
-function handleFile(inp,ch){if(!inp.files[0])return;const st=document.getElementById('st-'+ch);st.style.color='var(--gray-400)';st.textContent='Reading '+inp.files[0].name+'...';setTimeout(()=>{st.textContent='✓ File received — allocation pools updated.';st.style.color='var(--green)';if(ch==='wm'){updateWMPool();renderAlloc();}if(ch==='tt'){updateTTPool();renderAlloc();}if(ch==='tgt'){updateTGTPool();renderAlloc();}},600);}
+function drop(e,ch){e.preventDefault();var f=e.dataTransfer.files[0];if(f)handleFile({files:[f]},ch);}
+function handleFile(inp,ch){
+  if(!inp.files[0])return;
+  var file=inp.files[0],st=document.getElementById('st-'+ch);
+  st.style.color='var(--gray-400)';st.textContent='Reading '+file.name+'...';
+
+  // Find best matching column index from a header row
+  // skuTerms / availTerms / inboundTerms — returns first matching col index or -1
+  function bestCol(hdr,terms){
+    for(var t=0;t<terms.length;t++){
+      for(var i=0;i<hdr.length;i++){
+        if(hdr[i].indexOf(terms[t])>=0)return i;
+      }
+    }
+    return -1;
+  }
+
+  function parse(rows){
+    if(!rows||rows.length<2){st.textContent='No data rows found.';st.style.color='var(--red)';return;}
+
+    // Normalise header row
+    var hdr=rows[0].map(function(h){return String(h||'').toLowerCase().replace(/[^a-z0-9]/g,' ').trim();});
+    var data=rows.slice(1).filter(function(r){return r.some(function(c){return String(c||'').trim()!=='';});});
+
+    // SKU column — look for these terms in order
+    var iSKU=bestCol(hdr,['sku','partner sku','item number','item id','goods reference','tcin','product id','asin','item']);
+    // Available qty — look for available first, then on hand, then qty
+    var iAVAIL=bestCol(hdr,['avail','on hand','onhand','in stock','sellable','fba available','fbt available','dc inventory','inventory']);
+    // Inbound / in-transit
+    var iINB=bestCol(hdr,['inbound','in transit','intransit','on order','incoming','transfer']);
+    // Name
+    var iNAME=bestCol(hdr,['name','title','description','product name','item name']);
+
+    if(iSKU<0){
+      // fallback: first column is SKU
+      iSKU=0;
+    }
+    if(iAVAIL<0){
+      // fallback: second numeric column
+      for(var i=0;i<hdr.length;i++){
+        if(i!==iSKU&&parseFloat(String(rows[1][i]||''))>=0){iAVAIL=i;break;}
+      }
+    }
+
+    try{
+      if(ch==='wm'){
+        WM.length=0;
+        data.forEach(function(r){
+          var s=String(r[iSKU]||'').trim();if(!s||s===hdr[iSKU])return;
+          var av=parseFloat(String(r[iAVAIL]||'').replace(/,/g,''))||0;
+          var ib=iINB>=0?parseFloat(String(r[iINB]||'').replace(/,/g,''))||0:0;
+          var n=iNAME>=0?String(r[iNAME]||'').trim():nm(s);
+          var d=D.walmart[s]||0;
+          var t=av+ib;
+          var dos=d>0?Math.round(t/d):999;
+          var status=t===0?'OOS':dos<30?'At Risk':'In Stock';
+          WM.push({sku:s,name:n,avail:av,inbound:ib,daily:d,dos:dos,status:status});
+        });
+        updateWMPool();renderAlloc();
+        st.textContent='✓ '+WM.length+' SKUs loaded from '+file.name;st.style.color='var(--green)';
+      } else if(ch==='tt'){
+        TT.length=0;
+        data.forEach(function(r){
+          var s=String(r[iSKU]||'').trim();if(!s||s===hdr[iSKU])return;
+          var av=parseFloat(String(r[iAVAIL]||'').replace(/,/g,''))||0;
+          var ib=iINB>=0?parseFloat(String(r[iINB]||'').replace(/,/g,''))||0:0;
+          var n=iNAME>=0?String(r[iNAME]||'').trim():nm(s);
+          var d=D.tiktok[s]||0;
+          TT.push({sku:s,name:n,avail:av,inbound:ib,daily7:d,dos:d>0?Math.round((av+ib)/d):null});
+        });
+        updateTTPool();renderAlloc();
+        st.textContent='✓ '+TT.length+' SKUs loaded from '+file.name;st.style.color='var(--green)';
+      } else if(ch==='tgt'){
+        TGT.length=0;
+        // Target uses TCIN as primary ID but may also have SKU
+        var iTCIN=bestCol(hdr,['tcin']);
+        data.forEach(function(r){
+          var s=String(r[iSKU]||'').trim();if(!s||s===hdr[iSKU])return;
+          var tc=iTCIN>=0?parseInt(String(r[iTCIN]||'').replace(/,/g,''))||0:0;
+          var inv=parseFloat(String(r[iAVAIL]||'').replace(/,/g,''))||0;
+          var ib=iINB>=0?parseFloat(String(r[iINB]||'').replace(/,/g,''))||0:0;
+          var ti=iNAME>=0?String(r[iNAME]||'').trim():nm(s);
+          TGT.push({tcin:tc,sku:s,title:ti,inv:inv,inbound:ib,price:0});
+        });
+        updateTGTPool();renderAlloc();
+        st.textContent='✓ '+TGT.length+' SKUs loaded from '+file.name;st.style.color='var(--green)';
+      }
+    } catch(err){
+      st.textContent='Error parsing file: '+err.message;st.style.color='var(--red)';
+    }
+  }
+
+  // Read file — CSV or Excel
+  var ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'){
+    var rd=new FileReader();
+    rd.onload=function(e){
+      var lines=e.target.result.split(/\r?\n/);
+      parse(lines.map(function(l){
+        // Handle quoted CSV fields
+        var out=[],cur='',inq=false;
+        for(var i=0;i<l.length;i++){
+          var c=l[i];
+          if(c==='"'){inq=!inq;}
+          else if(c===','&&!inq){out.push(cur);cur='';}
+          else{cur+=c;}
+        }
+        out.push(cur);
+        return out;
+      }));
+    };
+    rd.readAsText(file);
+  } else {
+    // Excel — needs SheetJS
+    if(typeof XLSX==='undefined'){
+      st.textContent='Excel support not loaded. Try saving as CSV.';st.style.color='var(--red)';return;
+    }
+    var rd=new FileReader();
+    rd.onload=function(e){
+      try{
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        parse(XLSX.utils.sheet_to_json(ws,{header:1,defval:''}));
+      } catch(err){
+        st.textContent='Excel error: '+err.message;st.style.color='var(--red)';
+      }
+    };
+    rd.readAsArrayBuffer(file);
+  }
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────
 document.getElementById('as-of-date').textContent='Apr 14, 2026';
