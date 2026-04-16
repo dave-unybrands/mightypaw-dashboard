@@ -733,11 +733,11 @@ const CHANNEL_DEFS=[
    badge:()=>'bg',badgeLbl:()=>'Healthy',
    html:()=>buildTbl('amz-ca',AMZ_CA.filter(r=>!DISC_CA.has(r.sku)&&!NO_ASIN.has(r.sku)),['sku','name'],amzRow,['SKU / Product','Daily (Flieber)','FBA available','Inbound to AMZ','Total FBA','DOS'])},
   {id:'shopify',label:'Shopify (DTC)',color:'#95bf47',live:true,
-   skus:()=>202,oosCount:()=>computeAlerts().shopify.filter(r=>r.status==='OOS'||r.status==='Critical <7d').length,avgDOS:()=>null,atRisk:()=>Object.keys(D.shopify).filter(s=>{const d=D.shopify[s];return d>0&&(WH[s]||0)/d<30;}).length,
+   skus:()=>202,oosCount:()=>computeAlerts().shopify.filter(r=>r.status==='OOS'||r.status==='Critical <7d').length,avgDOS:()=>null,atRisk:()=>Object.keys(D.shopify).filter(s=>{const d=D.shopify[s];return d>0&&!DISC_US.has(s)&&!NO_ASIN.has(s)&&(WH[s]||0)/d<30&&(WH[s]||0)/d>=7;}).length,
    badge:()=>'bg',badgeLbl:()=>'Via WH 240',
    html:()=>`<div class="nb">Fulfilled from WH 240. Velocities live from Flieber (Mighty Paw-Shopify-US). Use the WH 240 Allocation tab to see per-SKU coverage.</div>${buildTbl('shopify',Object.entries(D.shopify).filter(([s,d])=>d>0&&!DISC_US.has(s)&&!NO_ASIN.has(s)).sort((a,b)=>b[1]-a[1]).map(([s,d])=>({sku:s,daily_velocity:d,forecast_n45d:Math.round(d*45)})),['sku'],r=>flRow('shopify',r),['SKU / Product','Daily velocity (Flieber)','WH 240 on hand','WH 240 coverage'])}` },
   {id:'chewy',label:'Chewy (Wholesale)',color:'#0066cc',live:true,
-   skus:()=>44,oosCount:()=>0,avgDOS:()=>null,atRisk:()=>Object.keys(D.chewy).filter(s=>{const d=D.chewy[s];return d>0&&(WH[s]||0)/d<30;}).length,
+   skus:()=>44,oosCount:()=>0,avgDOS:()=>null,atRisk:()=>Object.keys(D.chewy).filter(s=>{const d=D.chewy[s];return d>0&&!DISC_US.has(s)&&!NO_ASIN.has(s)&&(WH[s]||0)/d<30&&(WH[s]||0)/d>=7;}).length,
    badge:()=>'bx',badgeLbl:()=>'No inv data',
    html:()=>`<div class="nb">Wholesale channel. Velocities live from Flieber (Mighty Paw-CHEWY-US). Fulfilled from WH 240.</div>${buildTbl('chewy',Object.entries(D.chewy).filter(([s,d])=>d>0&&!DISC_US.has(s)&&!NO_ASIN.has(s)).sort((a,b)=>b[1]-a[1]).map(([s,d])=>({sku:s,daily_velocity:d,forecast_n45d:Math.round(d*45)})),['sku'],r=>flRow('chewy',r),['SKU / Product','Daily velocity (Flieber)','WH 240 on hand','WH 240 coverage'])}` },
   {id:'tiktok',label:'TikTok (FBT + Samples)',color:'#111',live:true,
@@ -1173,8 +1173,8 @@ function openDrill(id,filter){
     var velData;
     if(id==="shopify") velData=Object.entries(D.shopify).filter(function(e){return e[1]>0&&!DISC_US.has(e[0])&&!NO_ASIN.has(e[0]);}).sort(function(a,b){return b[1]-a[1];}).map(function(e){return{sku:e[0],daily_velocity:e[1],forecast_n45d:Math.round(e[1]*45)};});
     else velData=Object.entries(D.chewy).filter(function(e){return e[1]>0&&!DISC_US.has(e[0])&&!NO_ASIN.has(e[0]);}).sort(function(a,b){return b[1]-a[1];}).map(function(e){return{sku:e[0],daily_velocity:e[1],forecast_n45d:Math.round(e[1]*45)};});
-    if(filter==="oos") velData=velData.filter(function(r){return (WH[r.sku]||0)===0;});
-    else if(filter==="risk") velData=velData.filter(function(r){var wh=WH[r.sku]||0;return wh>0&&r.daily_velocity>0&&wh/r.daily_velocity<30;});
+    if(filter==="oos") velData=velData.filter(function(r){var wh=WH[r.sku]||0;var d=r.daily_velocity;return wh===0||(d>0&&wh/d<7);});
+    else if(filter==="risk") velData=velData.filter(function(r){var wh=WH[r.sku]||0;var d=r.daily_velocity;return wh>0&&d>0&&wh/d>=7&&wh/d<30;});
     document.getElementById("drill-body").innerHTML=buildTbl(id,velData,["sku"],function(r){return flRow(id,r);},["SKU / Product","Daily velocity (Flieber)","WH 240 on hand","WH 240 coverage"]);
   }
   initCh(id.replace("_","-"));
