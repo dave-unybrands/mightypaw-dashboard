@@ -1255,6 +1255,7 @@ function handleFile(inp,ch){
         WM.length=0;
         data.forEach(function(r){
           var s=String(r[iSKU]||'').trim();if(!s||s===hdr[iSKU])return;
+          if(DISC_US.has(s)||NO_ASIN.has(s))return; // skip Megaray/no-ASIN
           var av=parseFloat(String(r[iAVAIL]||'').replace(/,/g,''))||0;
           var ib=iINB>=0?parseFloat(String(r[iINB]||'').replace(/,/g,''))||0:0;
           var n=iNAME>=0?String(r[iNAME]||'').trim():nm(s);
@@ -1284,6 +1285,8 @@ function handleFile(inp,ch){
         var iTCIN=bestCol(hdr,['tcin']);
         data.forEach(function(r){
           var s=String(r[iSKU]||'').trim();if(!s||s===hdr[iSKU])return;
+          if(s.toLowerCase().indexOf('parent')>=0)return; // skip parent rows
+          if(DISC_US.has(s)||NO_ASIN.has(s))return; // skip Megaray/no-ASIN
           var tc=iTCIN>=0?parseInt(String(r[iTCIN]||'').replace(/,/g,''))||0:0;
           var inv=parseFloat(String(r[iAVAIL]||'').replace(/,/g,''))||0;
           var ib=iINB>=0?parseFloat(String(r[iINB]||'').replace(/,/g,''))||0:0;
