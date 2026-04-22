@@ -207,6 +207,20 @@ body{font-family:'PP Object Sans','DM Sans',Arial,Helvetica,sans-serif;backgroun
 .rev-tooltip{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--uny-grey);color:#fff;font-size:9px;text-align:center;line-height:12px;margin-left:4px;cursor:help;font-weight:600;vertical-align:middle;position:relative}
 .rev-tooltip:hover::after{content:attr(data-tip);position:absolute;background:var(--uny-navy);color:#fff;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:400;white-space:normal;width:240px;z-index:1000;top:16px;left:0;box-shadow:var(--shadow-md)}
 
+/* Channel card stat boxes: 2x2 grid gives each stat room to breathe.
+   With 4 stats (Total, OOS, At risk, Rev/d at risk) a 2x2 layout is far
+   more readable than squeezing them all into one row. */
+.ch-stats{display:grid;grid-template-columns:1fr 1fr !important;gap:6px;min-width:0}
+.cst{min-width:0;overflow:hidden;padding:8px 6px}
+.cst-v{font-size:15px !important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;line-height:1.2}
+.cst-l{font-size:10px !important;line-height:1.2;white-space:normal;word-break:break-word;margin-top:3px}
+.cst-rev .cst-v{font-size:14px !important;font-weight:600}
+.cst-rev .cst-l{font-size:10px !important}
+/* Give the overall card a bit more height since we now have 2 rows of stats */
+.ch-card{min-width:0;overflow:hidden;min-height:170px}
+.ch-hdr{min-width:0}
+.ch-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
+
 /* Table readability: drill-down + alert tables */
 #drill-body table,#tab-alert table{table-layout:auto;min-width:100%}
 #drill-body table th,#drill-body table td,
@@ -656,6 +670,13 @@ function atRisk(arr,gD,gR){return arr.filter(r=>{const d=gR(r);return d>0&&gD(r)
 // isn't in the snapshot, inventory defaults to 0 (but the SKU still shows).
 // DOS = total inventory / daily velocity (Flieber). Preserved exactly.
 function buildChannelRows(chId){
+
+  // TikTok: restrict to SKUs the user has uploaded via the Import tab.
+  // If no upload yet, the channel shows no rows (rather than the full Flieber list).
+  var __ttAllow = null;
+  if(chId==='tiktok'){
+    __ttAllow = new Set((typeof TT!=='undefined' && TT) ? TT.map(function(r){return r.sku;}) : []);
+  }
   const disc = chId==='amz_ca' ? DISC_CA : DISC_US;
   const vel  = D[chId] || {};
   // Build inv lookup by SKU for channels that have an inventory snapshot
@@ -670,6 +691,7 @@ function buildChannelRows(chId){
   Object.keys(vel).forEach(sku=>{
     const daily = vel[sku]||0;
     if(daily<=0) return;
+    if(__ttAllow && !__ttAllow.has(sku)) return;  // TikTok: uploaded-only gate
     if(disc.has(sku) || NO_ASIN.has(sku)) return;
     const ir = inv[sku];
     let avail=0, inbound=0, total=0, name=nm(sku);
@@ -752,12 +774,14 @@ function updateWMPool(){
     const total=(r.avail||0)+(r.inbound||0);
     MKT_POOL['walmart:'+r.sku]=total;
   });
+  try{ if(window.__mpPersistImport) window.__mpPersistImport('wm'); }catch(e){}
 }
 function updateTGTPool(){
   TGT.forEach(r=>{
     const total=(r.inv||0)+(r.inbound||0);
     MKT_POOL['target:'+r.sku]=total;
   });
+  try{ if(window.__mpPersistImport) window.__mpPersistImport('tgt'); }catch(e){}
 }
 function updateTTPool(){
   // TikTok FBT inventory from uploaded TT array (avail + inbound)
@@ -765,6 +789,7 @@ function updateTTPool(){
     const total=(r.avail||0)+(r.inbound||0);
     MKT_POOL['tiktok:'+r.sku]=total;
   });
+  try{ if(window.__mpPersistImport) window.__mpPersistImport('tt'); }catch(e){}
 }
 // Call on init to seed pools from hardcoded uploaded data
 function initMarketplacePools(){
@@ -1075,6 +1100,32 @@ function whOnlyRow(chId,r){
   </tr>`;
 }
 
+// ── By-Channel variants: same row shape but no Rev lost/d column ──
+function mergedRowNoRev(r){
+  return `<tr>
+    <td>${skuCell(r.sku,r.name)}</td>
+    <td style="text-align:right">${r.daily.toFixed(2)}</td>
+    <td style="text-align:right">${(r.avail||0).toLocaleString()}</td>
+    <td style="text-align:right;color:var(--blue)">${(r.inbound||0).toLocaleString()}</td>
+    <td style="text-align:right;font-weight:600">${(r.total||0).toLocaleString()}</td>
+    <td class="col-dos">${bar(r.dos)}${dl(r.dos)}</td>
+  </tr>`;
+}
+function whOnlyRowNoRev(chId,r){
+  const wh = r.avail;
+  const chDemand = Math.round(r.daily * (DOS_TARGETS[chId]||45));
+  const wh240ForCh = Math.min(wh, chDemand);
+  const covPct = chDemand>0 ? Math.min(100, Math.round((wh240ForCh/chDemand)*100)) : 100;
+  const covCl = covPct>=100?'dg':covPct>=70?'dy':'dr';
+  return `<tr>
+    <td>${skuCell(r.sku,r.name)}</td>
+    <td style="text-align:right">${r.daily.toFixed(2)}</td>
+    <td style="text-align:right">${wh.toLocaleString()}</td>
+    <td class="col-dos">${bar(r.dos)}${dl(r.dos)}</td>
+    <td><span class="dp ${covCl}">${covPct}%</span><div style="font-size:9px;color:var(--gray-400);margin-top:1px">WH 240 coverage</div></td>
+  </tr>`;
+}
+
 // CHANNEL_DEFS — everything computed off buildChannelRows() so card counts
 // and drill-through always agree. Counts:
 //   OOS          -> total inventory == 0
@@ -1090,7 +1141,7 @@ const CHANNEL_DEFS=[
    atRisk:()=>buildChannelRows('amz_us').filter(r=>classify(r)==='risk').length,
    badge:()=>{const d=avgDOS(buildChannelRows('amz_us'),r=>r.total,r=>r.daily);return d<30?'br':d<45?'by':'bg'},
    badgeLbl:()=>{const d=avgDOS(buildChannelRows('amz_us'),r=>r.total,r=>r.daily);return d<30?'At risk':d<45?'Watch':'Healthy'},
-   html:()=>buildTbl('amz-us',buildChannelRows('amz_us'),['sku','name'],mergedRow,['SKU / Product','Daily (Flieber)','FBA available','Inbound to AMZ','Total FBA','DOS'])},
+   html:()=>buildTbl('amz-us',buildChannelRows('amz_us'),['sku','name'],mergedRowNoRev,['SKU / Product','Daily (Flieber)','FBA available','Inbound to AMZ','Total FBA','DOS'])},
   {id:'amz_ca',label:'Amazon CA (FBA)',color:'#2176b5',live:true,
    skus:()=>buildChannelRows('amz_ca').length,
    oosCount:()=>buildChannelRows('amz_ca').filter(r=>{const k=classify(r);return k==='oos'||k==='critical';}).length,
@@ -1098,21 +1149,21 @@ const CHANNEL_DEFS=[
    atRisk:()=>buildChannelRows('amz_ca').filter(r=>classify(r)==='risk').length,
    badge:()=>{const d=avgDOS(buildChannelRows('amz_ca'),r=>r.total,r=>r.daily);return d<30?'br':d<45?'by':'bg'},
    badgeLbl:()=>{const d=avgDOS(buildChannelRows('amz_ca'),r=>r.total,r=>r.daily);return d<30?'At risk':d<45?'Watch':'Healthy'},
-   html:()=>buildTbl('amz-ca',buildChannelRows('amz_ca'),['sku','name'],mergedRow,['SKU / Product','Daily (Flieber)','FBA available','Inbound to AMZ','Total FBA','DOS'])},
+   html:()=>buildTbl('amz-ca',buildChannelRows('amz_ca'),['sku','name'],mergedRowNoRev,['SKU / Product','Daily (Flieber)','FBA available','Inbound to AMZ','Total FBA','DOS'])},
   {id:'shopify',label:'Shopify (DTC)',color:'#95bf47',live:true,
    skus:()=>buildChannelRows('shopify').length,
    oosCount:()=>buildChannelRows('shopify').filter(r=>{const k=classify(r);return k==='oos'||k==='critical';}).length,
    avgDOS:()=>avgDOS(buildChannelRows('shopify'),r=>r.total,r=>r.daily),
    atRisk:()=>buildChannelRows('shopify').filter(r=>classify(r)==='risk').length,
    badge:()=>'bg',badgeLbl:()=>'Via WH 240',
-   html:()=>`<div class="nb">Fulfilled from WH 240. Velocities live from Flieber (Mighty Paw-Shopify-US). Use the WH 240 Allocation tab to see per-SKU coverage.</div>${buildTbl('shopify',buildChannelRows('shopify').sort((a,b)=>b.daily-a.daily),['sku','name'],r=>whOnlyRow('shopify',r),['SKU / Product','Daily (Flieber)','WH 240 on hand','DOS','WH 240 coverage'])}` },
+   html:()=>`<div class="nb">Fulfilled from WH 240. Velocities live from Flieber (Mighty Paw-Shopify-US). Use the WH 240 Allocation tab to see per-SKU coverage.</div>${buildTbl('shopify',buildChannelRows('shopify').sort((a,b)=>b.daily-a.daily),['sku','name'],r=>whOnlyRowNoRev('shopify',r),['SKU / Product','Daily (Flieber)','WH 240 on hand','DOS','WH 240 coverage'])}` },
   {id:'chewy',label:'Chewy (Wholesale)',color:'#0066cc',live:true,
    skus:()=>buildChannelRows('chewy').length,
    oosCount:()=>buildChannelRows('chewy').filter(r=>{const k=classify(r);return k==='oos'||k==='critical';}).length,
    avgDOS:()=>avgDOS(buildChannelRows('chewy'),r=>r.total,r=>r.daily),
    atRisk:()=>buildChannelRows('chewy').filter(r=>classify(r)==='risk').length,
    badge:()=>'bg',badgeLbl:()=>'Via WH 240',
-   html:()=>`<div class="nb">Wholesale channel. Velocities live from Flieber (Mighty Paw-CHEWY-US). Fulfilled from WH 240.</div>${buildTbl('chewy',buildChannelRows('chewy').sort((a,b)=>b.daily-a.daily),['sku','name'],r=>whOnlyRow('chewy',r),['SKU / Product','Daily (Flieber)','WH 240 on hand','DOS','WH 240 coverage'])}` },
+   html:()=>`<div class="nb">Wholesale channel. Velocities live from Flieber (Mighty Paw-CHEWY-US). Fulfilled from WH 240.</div>${buildTbl('chewy',buildChannelRows('chewy').sort((a,b)=>b.daily-a.daily),['sku','name'],r=>whOnlyRowNoRev('chewy',r),['SKU / Product','Daily (Flieber)','WH 240 on hand','DOS','WH 240 coverage'])}` },
   {id:'tiktok',label:'TikTok (FBT + Samples)',color:'#111',live:true,
    skus:()=>buildChannelRows('tiktok').length,
    oosCount:()=>buildChannelRows('tiktok').filter(r=>{const k=classify(r);return k==='oos'||k==='critical';}).length,
@@ -1120,7 +1171,7 @@ const CHANNEL_DEFS=[
    atRisk:()=>buildChannelRows('tiktok').filter(r=>classify(r)==='risk').length,
    badge:()=>{const d=avgDOS(buildChannelRows('tiktok'),r=>r.total,r=>r.daily);return d<30?'br':d<45?'by':'bg'},
    badgeLbl:()=>{const d=avgDOS(buildChannelRows('tiktok'),r=>r.total,r=>r.daily);return d<30?'At risk':d<45?'Watch':'Healthy'},
-   html:()=>buildTbl('tiktok',buildChannelRows('tiktok'),['sku','name'],mergedRow,['SKU / Product','Daily (Flieber)','FBT available','Inbound','Total FBT','DOS'])},
+   html:()=>buildTbl('tiktok',buildChannelRows('tiktok'),['sku','name'],mergedRowNoRev,['SKU / Product','Daily (Flieber)','FBT available','Inbound','Total FBT','DOS'])},
   {id:'walmart',label:'Walmart 3P',color:'#0071ce',live:true,
    skus:()=>buildChannelRows('walmart').length,
    oosCount:()=>buildChannelRows('walmart').filter(r=>{const k=classify(r);return k==='oos'||k==='critical';}).length,
@@ -1128,7 +1179,7 @@ const CHANNEL_DEFS=[
    atRisk:()=>buildChannelRows('walmart').filter(r=>classify(r)==='risk').length,
    badge:()=>{const d=avgDOS(buildChannelRows('walmart'),r=>r.total,r=>r.daily);return d<30?'br':d<45?'by':'bg'},
    badgeLbl:()=>{const d=avgDOS(buildChannelRows('walmart'),r=>r.total,r=>r.daily);return d<30?'At risk':d<45?'Watch':'Healthy'},
-   html:()=>buildTbl('walmart',buildChannelRows('walmart'),['sku','name'],mergedRow,['SKU / Product','Daily (Flieber)','WMT available','Inbound','Total WMT','DOS'])},
+   html:()=>buildTbl('walmart',buildChannelRows('walmart'),['sku','name'],mergedRowNoRev,['SKU / Product','Daily (Flieber)','WMT available','Inbound','Total WMT','DOS'])},
   {id:'target',label:'Target+',color:'#cc0000',live:true,
    skus:()=>buildChannelRows('target').length,
    oosCount:()=>buildChannelRows('target').filter(r=>{const k=classify(r);return k==='oos'||k==='critical';}).length,
@@ -1136,7 +1187,7 @@ const CHANNEL_DEFS=[
    atRisk:()=>buildChannelRows('target').filter(r=>classify(r)==='risk').length,
    badge:()=>{const d=avgDOS(buildChannelRows('target'),r=>r.total,r=>r.daily);return d<30?'br':d<45?'by':'bg'},
    badgeLbl:()=>{const d=avgDOS(buildChannelRows('target'),r=>r.total,r=>r.daily);return d<30?'At risk':d<45?'Watch':'Healthy'},
-   html:()=>buildTbl('target',buildChannelRows('target'),['sku','name'],mergedRow,['SKU / Product','Daily (Flieber)','DC Inventory','Inbound','Total','DOS'])},
+   html:()=>buildTbl('target',buildChannelRows('target'),['sku','name'],mergedRowNoRev,['SKU / Product','Daily (Flieber)','DC Inventory','Inbound','Total','DOS'])},
 ];
 
 
@@ -1708,6 +1759,112 @@ function revTip(){
 }
 window.revLost=revLost; window.fmtRevLost=fmtRevLost; window.revTip=revTip;
 
+/* === WM/TT/TGT IMPORT PERSISTENCE ===
+   Save imported inventory to localStorage after each upload.
+   Restore on page load so users don't have to re-upload every session.
+   Note: the actual persist calls are injected into updateWMPool /
+   updateTTPool / updateTGTPool at build time (see build.py). */
+(function(){
+  var LS_WM='mp_dash_wm_v1', LS_TT='mp_dash_tt_v1', LS_TGT='mp_dash_tgt_v1';
+  var LS_META='mp_dash_imports_meta_v1';
+
+  function lsSet(key,val){
+    try{ localStorage.setItem(key,JSON.stringify(val)); return true; }
+    catch(e){ console.warn('localStorage write failed',e); return false; }
+  }
+  function lsGet(key){
+    try{ var v=localStorage.getItem(key); return v?JSON.parse(v):null; }
+    catch(e){ return null; }
+  }
+  function getMeta(){ return lsGet(LS_META)||{}; }
+  function setMeta(m){ lsSet(LS_META,m); }
+
+  // Expose helpers for build-time-injected persist calls inside updateXxxPool
+  window.__mpPersistImport = function(which){
+    if(window.__mp_restoring) return;
+    try{
+      var key, arr, metaKey;
+      if(which==='wm'){  key=LS_WM;  arr=(typeof WM!=='undefined'?WM:null);   metaKey='wm';  }
+      else if(which==='tt'){ key=LS_TT; arr=(typeof TT!=='undefined'?TT:null);  metaKey='tt';  }
+      else if(which==='tgt'){key=LS_TGT;arr=(typeof TGT!=='undefined'?TGT:null);metaKey='tgt'; }
+      else return;
+      if(!arr) return;
+      // Only persist when the array has something meaningful in it
+      // (so an empty initial updateXxxPool() on page load doesn't wipe saved data)
+      if(arr.length>0){
+        lsSet(key, arr);
+        var m=getMeta();
+        m[metaKey]={count:arr.length, at:new Date().toISOString()};
+        setMeta(m);
+      }
+    }catch(e){ console.warn('persist '+which+' failed',e); }
+  };
+
+  // Restore saved imports once the DOM + globals are ready
+  function restore(){
+    if(window.__mp_restored) return; window.__mp_restored=true;
+    try{
+      var wm=lsGet(LS_WM), tt=lsGet(LS_TT), tgt=lsGet(LS_TGT);
+      var meta=getMeta();
+      var restored=[];
+      function fmtAt(iso){
+        if(!iso) return '';
+        try{
+          var d=new Date(iso);
+          return d.toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+        }catch(e){ return iso; }
+      }
+      if(wm && Array.isArray(wm) && wm.length>0 && typeof WM!=='undefined'){
+        WM.length=0; wm.forEach(function(r){WM.push(r);});
+        restored.push('WM '+wm.length);
+        var st=document.getElementById('st-wm');
+        if(st && meta.wm){
+          st.textContent='✓ '+wm.length+' SKUs · restored from last upload '+fmtAt(meta.wm.at);
+          st.style.color='var(--green,#27500a)';
+        }
+      }
+      if(tt && Array.isArray(tt) && tt.length>0 && typeof TT!=='undefined'){
+        TT.length=0; tt.forEach(function(r){TT.push(r);});
+        restored.push('TT '+tt.length);
+        var st2=document.getElementById('st-tt');
+        if(st2 && meta.tt){
+          st2.textContent='✓ '+tt.length+' SKUs · restored from last upload '+fmtAt(meta.tt.at);
+          st2.style.color='var(--green,#27500a)';
+        }
+      }
+      if(tgt && Array.isArray(tgt) && tgt.length>0 && typeof TGT!=='undefined'){
+        TGT.length=0; tgt.forEach(function(r){TGT.push(r);});
+        restored.push('TGT '+tgt.length);
+        var st3=document.getElementById('st-tgt');
+        if(st3 && meta.tgt){
+          st3.textContent='✓ '+tgt.length+' SKUs · restored from last upload '+fmtAt(meta.tgt.at);
+          st3.style.color='var(--green,#27500a)';
+        }
+      }
+      if(restored.length>0){
+        try{
+          window.__mp_restoring=true;
+          if(typeof initMarketplacePools==='function') initMarketplacePools();
+          if(typeof refreshAllViews==='function') refreshAllViews();
+        }catch(e){ console.warn('refresh after restore failed',e); }
+        finally{ window.__mp_restoring=false; }
+        console.info('[MP dashboard] Restored imports:', restored.join(', '));
+      }
+    }catch(e){ console.warn('import restore failed',e); }
+  }
+
+  // Run after DOM ready + after gate unlock. We retry in case unlock is late.
+  if(document.readyState==='complete' || document.readyState==='interactive'){
+    setTimeout(restore, 100);
+    setTimeout(restore, 600);
+  } else {
+    window.addEventListener('DOMContentLoaded', function(){
+      setTimeout(restore, 100);
+      setTimeout(restore, 600);
+    });
+  }
+})();
+
 /* Channel-card 4th stat (Rev/d at risk) is DOM-patched after renderCards */
 (function(){
   if(typeof renderCards==='function'){
@@ -1730,10 +1887,10 @@ window.revLost=revLost; window.fmtRevLost=fmtRevLost; window.revTip=revTip;
             }
           });
           var txt = riskTotal<1 ? '—' : (riskTotal<1000? '$'+Math.round(riskTotal) : '$'+Math.round(riskTotal).toLocaleString());
-          stats.style.gridTemplateColumns='1fr 1fr 1fr 1fr';
+          // CSS handles 2x2 grid layout via .ch-stats override — don't force columns here
           var cst=document.createElement('div');
           cst.className='cst cst-rev';
-          cst.innerHTML='<div class="cst-v" style="color:var(--uny-red);font-size:13px">'+txt+'</div><div class="cst-l">Rev/d at risk</div>';
+          cst.innerHTML='<div class="cst-v" style="color:var(--uny-red)">'+txt+'</div><div class="cst-l">Rev/d at risk</div>';
           stats.appendChild(cst);
         });
         // Rerun when tab switches to exec — some layouts delay measurement
